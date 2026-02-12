@@ -2,7 +2,7 @@
 
 ## 🌐 URL de la Aplicación
 
-**Aplicación Web**: https://3000-i8qh3aowtsi1cskm7t6pw-ad490db5.sandbox.novita.ai
+**Aplicación Web**: https://smart-homes.pages.dev ✅ **ONLINE Y FUNCIONAL**
 
 ---
 
