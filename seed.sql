@@ -82,3 +82,33 @@ INSERT OR IGNORE INTO ticket_responses (ticket_id, user_id, message, is_internal
   (2, 2, 'Perfecto, estaré disponible mañana por la tarde.', 0),
   (3, 1, 'Actualización completada exitosamente. Sistema funcionando correctamente.', 0),
   (3, 3, 'Excelente servicio, gracias!', 0);
+
+-- Agregar más eventos para el timeline
+INSERT OR IGNORE INTO events (residence_id, device_id, user_id, event_type, description) VALUES 
+  ('H-001', 1, 1, 'firmware_update', 'Actualización de firmware completada en Router Principal'),
+  ('H-001', 2, 1, 'device_status_change', 'NVR Grabador reiniciado exitosamente'),
+  ('H-001', 4, 2, 'device_configured', 'Sonos Beam configurado con nueva zona de audio'),
+  ('H-002', 6, 1, 'maintenance_completed', 'Mantenimiento completado en Cámara Entrada'),
+  ('H-002', 7, 3, 'device_configured', 'Control Cortinas sincronizado con horarios'),
+  ('H-003', 10, 1, 'device_added', 'Cerradura Smart Yale instalada'),
+  ('H-003', 9, 1, 'firmware_update', 'Receiver AV actualizado a v1.6.0'),
+  ('H-001', NULL, 2, 'user_login', 'Cliente Juan Pérez accedió al sistema'),
+  ('H-002', NULL, 3, 'user_login', 'Cliente María García accedió al sistema'),
+  ('H-001', 3, 1, 'scene_created', 'Nueva escena "Movie Night" creada'),
+  ('H-002', NULL, 1, 'system_check', 'Revisión de mantenimiento preventivo completada'),
+  ('H-003', NULL, 1, 'subscription_expired', 'Suscripción de Penthouse Reforma ha expirado');
+
+-- Agregar más tickets para demostración
+INSERT OR IGNORE INTO support_tickets (id, residence_id, user_id, title, description, priority, status, category, assigned_to) VALUES 
+  (5, 'H-001', 2, 'Agregar usuario adicional', 'Necesito dar acceso a mi asistente personal para gestionar la casa.', 'low', 'resolved', 'Users', 1),
+  (6, 'H-002', 3, 'Problema con control de cortinas', 'Las cortinas de la sala no responden al horario programado.', 'medium', 'in_progress', 'Automation', 1),
+  (7, 'H-003', 1, 'Renovación de suscripción', 'Contactar a propietario para renovar suscripción del Penthouse.', 'urgent', 'open', 'Billing', NULL),
+  (8, 'H-001', 2, 'Instalar cámara adicional en jardín', 'Solicito cotización e instalación de cámara en área de jardín trasero.', 'medium', 'open', 'Security', 1);
+
+-- Agregar respuestas adicionales
+INSERT OR IGNORE INTO ticket_responses (ticket_id, user_id, message, is_internal) VALUES 
+  (5, 1, 'Usuario adicional creado. Credenciales enviadas por email separado.', 0),
+  (5, 2, 'Recibido, muchas gracias por la atención.', 0),
+  (6, 1, 'Estamos revisando la programación horaria. Actualizaremos en las próximas horas.', 0),
+  (7, 1, 'Email enviado al propietario. Pendiente de respuesta.', 1),
+  (8, 1, 'Cotización enviada: $450 USD instalación + $280 USD equipo Hikvision DS-2CD2185FWD. Instalación disponible esta semana.', 0);

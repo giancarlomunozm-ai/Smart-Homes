@@ -349,7 +349,7 @@ const Icon = ({ name, size = 16, className = '' }) => {
 };
 
 // Header Global
-const GlobalHeader = ({ currentView, currentResidence, onNavigate, onLogout }) => {
+const GlobalHeader = ({ currentView, currentResidence, onNavigate, onLogout, userRole }) => {
   return (
     <header className="fixed top-0 left-0 right-0 h-28 bg-[#F9F9F9]/70 backdrop-blur-3xl z-40 px-12 md:px-20 flex items-center justify-between border-b border-slate-200/40">
       <div 
@@ -381,6 +381,15 @@ const GlobalHeader = ({ currentView, currentResidence, onNavigate, onLogout }) =
           )}
         </div>
         <div className="flex gap-10">
+          {userRole === 'admin' && (
+            <button 
+              onClick={() => onNavigate('users')}
+              className={`text-slate-400 hover:text-slate-950 transition-all hover:scale-125 ${currentView === 'users' ? 'text-slate-950 scale-125' : ''}`}
+              title="Gestión de Usuarios"
+            >
+              <Icon name="Users" size={20} />
+            </button>
+          )}
           <button className="text-slate-400 hover:text-slate-950 transition-all hover:scale-125">
             <Icon name="Search" size={20} />
           </button>
@@ -872,6 +881,10 @@ const App = () => {
       return <ResidenceDirectory residences={residences} onSelectResidence={handleSelectResidence} />;
     }
 
+    if (view === 'users') {
+      return <UserManagement token={token} userRole={user?.role} />;
+    }
+
     if (view === 'dashboard' && currentResidence) {
       if (activeTab === 'systems') {
         if (selectedSystem) {
@@ -895,6 +908,14 @@ const App = () => {
         );
       }
 
+      if (activeTab === 'history') {
+        return <HistoryTab residenceId={currentResidence.id} token={token} />;
+      }
+
+      if (activeTab === 'support') {
+        return <SupportTab residenceId={currentResidence.id} token={token} userRole={user?.role} />;
+      }
+
       return (
         <div className="py-40 flex flex-col items-center justify-center text-center">
           <div className="w-20 h-[1px] bg-slate-950 mb-10" />
@@ -913,6 +934,7 @@ const App = () => {
         currentResidence={currentResidence}
         onNavigate={setView}
         onLogout={handleLogout}
+        userRole={user?.role}
       />
 
       <main className="flex-1 pt-52 pb-20 px-12 md:px-20 max-w-[1600px] mx-auto w-full">
@@ -947,3 +969,689 @@ root.render(
     <App />
   </AuthProvider>
 );
+
+// ==================== HISTORY TAB COMPONENT ====================
+const HistoryTab = ({ residenceId, token }) => {
+  const [events, setEvents] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const response = await fetch(`/api/events/residence/${residenceId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        if (data.success) {
+          setEvents(data.events || []);
+        }
+      } catch (error) {
+        console.error('Error fetching events:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (residenceId && token) {
+      fetchEvents();
+    }
+  }, [residenceId, token]);
+
+  const getEventIcon = (eventType) => {
+    const icons = {
+      device_added: '➕',
+      device_removed: '➖',
+      firmware_update: '🔄',
+      device_configured: '⚙️',
+      device_status_change: '🔌',
+      maintenance_started: '🔧',
+      maintenance_completed: '✅',
+      user_login: '👤',
+      scene_created: '🎬',
+      system_check: '🔍',
+      subscription_expired: '⚠️',
+      default: '📝'
+    };
+    return icons[eventType] || icons.default;
+  };
+
+  const getEventColor = (eventType) => {
+    const colors = {
+      device_added: 'text-green-600',
+      device_removed: 'text-red-600',
+      firmware_update: 'text-blue-600',
+      maintenance_completed: 'text-green-600',
+      maintenance_started: 'text-yellow-600',
+      user_login: 'text-purple-600',
+      subscription_expired: 'text-red-600',
+      default: 'text-gray-600'
+    };
+    return colors[eventType] || colors.default;
+  };
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Hace un momento';
+    if (diffMins < 60) return `Hace ${diffMins} min`;
+    if (diffHours < 24) return `Hace ${diffHours}h`;
+    if (diffDays < 7) return `Hace ${diffDays}d`;
+    return date.toLocaleDateString('es-ES', { month: 'short', day: 'numeric' });
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-slate-400">Cargando historial...</div>
+      </div>
+    );
+  }
+
+  if (events.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <div className="text-6xl mb-4">📭</div>
+        <div className="text-slate-400">No hay eventos registrados</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-xl font-bold text-slate-800">Timeline de Eventos</h3>
+        <div className="text-sm text-slate-500">{events.length} eventos</div>
+      </div>
+
+      <div className="relative">
+        {/* Timeline line */}
+        <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-slate-200"></div>
+
+        {/* Events */}
+        <div className="space-y-4">
+          {events.map((event, index) => (
+            <div key={event.id} className="relative flex items-start space-x-4 animate-in">
+              {/* Timeline dot */}
+              <div className={`relative z-10 flex-shrink-0 w-12 h-12 rounded-full bg-white border-2 border-slate-200 flex items-center justify-center text-xl ${getEventColor(event.event_type)}`}>
+                {getEventIcon(event.event_type)}
+              </div>
+
+              {/* Event card */}
+              <div className="flex-1 bg-white rounded-lg border border-slate-200 p-4 hover:shadow-md transition-shadow">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2 mb-1">
+                      <span className="text-sm font-semibold text-slate-700 uppercase tracking-wide">
+                        {event.event_type.replace(/_/g, ' ')}
+                      </span>
+                      {event.device_name && (
+                        <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-600 rounded">
+                          {event.device_name}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-slate-700 mb-2">{event.description}</p>
+                    <div className="flex items-center space-x-3 text-xs text-slate-500">
+                      <span>{formatDate(event.created_at)}</span>
+                      {event.user_name && (
+                        <>
+                          <span>•</span>
+                          <span>Por: {event.user_name}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-xs text-slate-400">
+                    {new Date(event.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ==================== SUPPORT TAB COMPONENT ====================
+const SupportTab = ({ residenceId, token, userRole }) => {
+  const [tickets, setTickets] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [showNewTicket, setShowNewTicket] = React.useState(false);
+  const [newTicket, setNewTicket] = React.useState({
+    title: '',
+    description: '',
+    priority: 'medium',
+    category: 'General'
+  });
+
+  React.useEffect(() => {
+    fetchTickets();
+  }, [residenceId, token]);
+
+  const fetchTickets = async () => {
+    try {
+      const response = await fetch(`/api/support/tickets?residence_id=${residenceId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setTickets(data.tickets || []);
+      }
+    } catch (error) {
+      console.error('Error fetching tickets:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateTicket = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch('/api/support/tickets', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          ...newTicket,
+          residence_id: residenceId
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setNewTicket({ title: '', description: '', priority: 'medium', category: 'General' });
+        setShowNewTicket(false);
+        fetchTickets();
+      }
+    } catch (error) {
+      console.error('Error creating ticket:', error);
+    }
+  };
+
+  const getPriorityColor = (priority) => {
+    const colors = {
+      low: 'bg-blue-100 text-blue-700',
+      medium: 'bg-yellow-100 text-yellow-700',
+      high: 'bg-orange-100 text-orange-700',
+      urgent: 'bg-red-100 text-red-700'
+    };
+    return colors[priority] || colors.medium;
+  };
+
+  const getStatusColor = (status) => {
+    const colors = {
+      open: 'bg-blue-100 text-blue-700',
+      in_progress: 'bg-purple-100 text-purple-700',
+      resolved: 'bg-green-100 text-green-700',
+      closed: 'bg-slate-100 text-slate-700'
+    };
+    return colors[status] || colors.open;
+  };
+
+  const getStatusIcon = (status) => {
+    const icons = {
+      open: '🔵',
+      in_progress: '🟣',
+      resolved: '✅',
+      closed: '⚫'
+    };
+    return icons[status] || '🔵';
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-slate-400">Cargando tickets...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-xl font-bold text-slate-800">Tickets de Soporte</h3>
+        <button
+          onClick={() => setShowNewTicket(!showNewTicket)}
+          className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors flex items-center space-x-2"
+        >
+          <span>{showNewTicket ? '✖' : '➕'}</span>
+          <span>{showNewTicket ? 'Cancelar' : 'Nuevo Ticket'}</span>
+        </button>
+      </div>
+
+      {/* New Ticket Form */}
+      {showNewTicket && (
+        <div className="bg-white rounded-lg border border-slate-200 p-6 mb-4 animate-in">
+          <h4 className="text-lg font-bold text-slate-800 mb-4">Crear Nuevo Ticket</h4>
+          <form onSubmit={handleCreateTicket} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Título</label>
+              <input
+                type="text"
+                required
+                value={newTicket.title}
+                onChange={(e) => setNewTicket({...newTicket, title: e.target.value})}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+                placeholder="Ej: Problema con router principal"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Descripción</label>
+              <textarea
+                required
+                rows="4"
+                value={newTicket.description}
+                onChange={(e) => setNewTicket({...newTicket, description: e.target.value})}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+                placeholder="Describe el problema en detalle..."
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Prioridad</label>
+                <select
+                  value={newTicket.priority}
+                  onChange={(e) => setNewTicket({...newTicket, priority: e.target.value})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+                >
+                  <option value="low">Baja</option>
+                  <option value="medium">Media</option>
+                  <option value="high">Alta</option>
+                  <option value="urgent">Urgente</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Categoría</label>
+                <select
+                  value={newTicket.category}
+                  onChange={(e) => setNewTicket({...newTicket, category: e.target.value})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+                >
+                  <option value="General">General</option>
+                  <option value="Network">Red</option>
+                  <option value="Security">Seguridad</option>
+                  <option value="Automation">Automatización</option>
+                  <option value="Users">Usuarios</option>
+                  <option value="Billing">Facturación</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => setShowNewTicket(false)}
+                className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors"
+              >
+                Crear Ticket
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Tickets List */}
+      {tickets.length === 0 ? (
+        <div className="text-center py-12">
+          <div className="text-6xl mb-4">📋</div>
+          <div className="text-slate-400">No hay tickets registrados</div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {tickets.map((ticket) => (
+            <div key={ticket.id} className="bg-white rounded-lg border border-slate-200 p-4 hover:shadow-md transition-shadow">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <span className="text-lg">{getStatusIcon(ticket.status)}</span>
+                    <h4 className="text-lg font-semibold text-slate-800">{ticket.title}</h4>
+                  </div>
+                  <p className="text-slate-600 mb-3">{ticket.description}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={`px-2 py-1 text-xs font-medium rounded ${getStatusColor(ticket.status)}`}>
+                      {ticket.status.replace(/_/g, ' ').toUpperCase()}
+                    </span>
+                    <span className={`px-2 py-1 text-xs font-medium rounded ${getPriorityColor(ticket.priority)}`}>
+                      Prioridad: {ticket.priority.toUpperCase()}
+                    </span>
+                    <span className="px-2 py-1 text-xs bg-slate-100 text-slate-700 rounded">
+                      {ticket.category}
+                    </span>
+                    <span className="text-xs text-slate-500">
+                      • Ticket #{ticket.id}
+                    </span>
+                    <span className="text-xs text-slate-500">
+                      • {new Date(ticket.created_at).toLocaleDateString('es-ES')}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ==================== USER MANAGEMENT COMPONENT (ADMIN ONLY) ====================
+const UserManagement = ({ token, userRole }) => {
+  const [users, setUsers] = React.useState([]);
+  const [residences, setResidences] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [showInviteForm, setShowInviteForm] = React.useState(false);
+  const [newUser, setNewUser] = React.useState({
+    email: '',
+    name: '',
+    password: '',
+    role: 'client',
+    residences: []
+  });
+
+  React.useEffect(() => {
+    if (userRole !== 'admin') {
+      return; // Solo admin puede ver esto
+    }
+    fetchUsers();
+    fetchResidences();
+  }, [token, userRole]);
+
+  const fetchUsers = async () => {
+    try {
+      const response = await fetch('/api/users', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setUsers(data.users || []);
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchResidences = async () => {
+    try {
+      const response = await fetch('/api/residences', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setResidences(data.residences || []);
+      }
+    } catch (error) {
+      console.error('Error fetching residences:', error);
+    }
+  };
+
+  const handleInviteUser = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(newUser)
+      });
+      const data = await response.json();
+      if (data.success) {
+        setNewUser({
+          email: '',
+          name: '',
+          password: '',
+          role: 'client',
+          residences: []
+        });
+        setShowInviteForm(false);
+        fetchUsers();
+        alert('Usuario creado exitosamente');
+      } else {
+        alert('Error: ' + (data.error || 'No se pudo crear el usuario'));
+      }
+    } catch (error) {
+      console.error('Error inviting user:', error);
+      alert('Error al crear usuario');
+    }
+  };
+
+  const handleDeleteUser = async (userId) => {
+    if (!confirm('¿Estás seguro de eliminar este usuario?')) return;
+    
+    try {
+      const response = await fetch(`/api/users/${userId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (data.success) {
+        fetchUsers();
+        alert('Usuario eliminado');
+      }
+    } catch (error) {
+      console.error('Error deleting user:', error);
+    }
+  };
+
+  const toggleResidence = (residenceId) => {
+    setNewUser(prev => ({
+      ...prev,
+      residences: prev.residences.includes(residenceId)
+        ? prev.residences.filter(id => id !== residenceId)
+        : [...prev.residences, residenceId]
+    }));
+  };
+
+  if (userRole !== 'admin') {
+    return (
+      <div className="text-center py-12">
+        <div className="text-6xl mb-4">🔒</div>
+        <div className="text-slate-600 text-lg font-medium">Acceso Solo para Administradores</div>
+        <div className="text-slate-400 mt-2">Esta sección está restringida al equipo Smart Spaces</div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-slate-400">Cargando usuarios...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-6xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-800">Gestión de Usuarios</h2>
+          <p className="text-slate-500 mt-1">Administra usuarios y permisos de acceso</p>
+        </div>
+        <button
+          onClick={() => setShowInviteForm(!showInviteForm)}
+          className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors flex items-center space-x-2"
+        >
+          <span>{showInviteForm ? '✖' : '➕'}</span>
+          <span>{showInviteForm ? 'Cancelar' : 'Invitar Usuario'}</span>
+        </button>
+      </div>
+
+      {/* Invite Form */}
+      {showInviteForm && (
+        <div className="bg-white rounded-lg border border-slate-200 p-6 mb-6 animate-in">
+          <h3 className="text-lg font-bold text-slate-800 mb-4">Crear Nuevo Usuario</h3>
+          <form onSubmit={handleInviteUser} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Nombre Completo</label>
+                <input
+                  type="text"
+                  required
+                  value={newUser.name}
+                  onChange={(e) => setNewUser({...newUser, name: e.target.value})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+                  placeholder="Ej: Juan Pérez"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  required
+                  value={newUser.email}
+                  onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+                  placeholder="usuario@example.com"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Contraseña</label>
+                <input
+                  type="password"
+                  required
+                  value={newUser.password}
+                  onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+                  placeholder="Mínimo 6 caracteres"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Rol</label>
+                <select
+                  value={newUser.role}
+                  onChange={(e) => setNewUser({...newUser, role: e.target.value})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+                >
+                  <option value="client">Cliente</option>
+                  <option value="admin">Administrador</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Residencias Asignadas</label>
+              <div className="grid grid-cols-3 gap-3">
+                {residences.map(residence => (
+                  <label key={residence.id} className="flex items-center space-x-2 p-3 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={newUser.residences.includes(residence.id)}
+                      onChange={() => toggleResidence(residence.id)}
+                      className="rounded text-slate-900 focus:ring-slate-900"
+                    />
+                    <span className="text-sm text-slate-700">{residence.id} - {residence.name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="flex justify-end space-x-3 pt-4">
+              <button
+                type="button"
+                onClick={() => setShowInviteForm(false)}
+                className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors"
+              >
+                Crear Usuario
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Users Table */}
+      <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+        <table className="w-full">
+          <thead className="bg-slate-50 border-b border-slate-200">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Usuario</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Rol</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Residencias</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Creado</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-slate-700 uppercase tracking-wider">Acciones</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-200">
+            {users.map((user) => (
+              <tr key={user.id} className="hover:bg-slate-50">
+                <td className="px-6 py-4">
+                  <div>
+                    <div className="text-sm font-medium text-slate-900">{user.name}</div>
+                    <div className="text-sm text-slate-500">{user.email}</div>
+                  </div>
+                </td>
+                <td className="px-6 py-4">
+                  <span className={`px-2 py-1 text-xs font-medium rounded ${user.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                    {user.role === 'admin' ? 'ADMIN' : 'CLIENTE'}
+                  </span>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="text-sm text-slate-600">
+                    {user.residence_count || 0} residencias
+                  </div>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="text-sm text-slate-500">
+                    {new Date(user.created_at).toLocaleDateString('es-ES')}
+                  </div>
+                </td>
+                <td className="px-6 py-4 text-right">
+                  {user.role !== 'admin' && (
+                    <button
+                      onClick={() => handleDeleteUser(user.id)}
+                      className="text-red-600 hover:text-red-800 text-sm font-medium"
+                    >
+                      Eliminar
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-4 mt-6">
+        <div className="bg-white rounded-lg border border-slate-200 p-4">
+          <div className="text-2xl font-bold text-slate-800">{users.length}</div>
+          <div className="text-sm text-slate-500">Total Usuarios</div>
+        </div>
+        <div className="bg-white rounded-lg border border-slate-200 p-4">
+          <div className="text-2xl font-bold text-slate-800">{users.filter(u => u.role === 'admin').length}</div>
+          <div className="text-sm text-slate-500">Administradores</div>
+        </div>
+        <div className="bg-white rounded-lg border border-slate-200 p-4">
+          <div className="text-2xl font-bold text-slate-800">{users.filter(u => u.role === 'client').length}</div>
+          <div className="text-sm text-slate-500">Clientes</div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ====================UPDATE APP COMPONENT WITH NEW VIEWS====================
+// Reemplazar el componente App existente con soporte para History, Support y Users
