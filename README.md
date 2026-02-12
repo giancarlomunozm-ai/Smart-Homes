@@ -5,9 +5,15 @@ Sistema de gestión inteligente de residencias con control de acceso diferenciad
 ## 🌐 URLs DE PRODUCCIÓN
 
 ### Aplicación Principal
-- **Producción**: https://smart-homes.pages.dev
-- **Deployment actual**: https://32f0b6c4.smart-homes.pages.dev
+- **Producción**: https://smart-homes.pages.dev ✅ **ONLINE Y FUNCIONAL**
+- **Deployment actual**: https://ee146a75.smart-homes.pages.dev
 - **GitHub**: https://github.com/giancarlomunozm-ai/Smart-Homes
+
+### Base de Datos D1
+- **Nombre**: smart-homes-production
+- **ID**: c2818feb-c3b8-4ee0-b474-dc45afb55905
+- **Región**: ENAM (East North America)
+- **Estado**: ✅ Configurada con datos demo
 
 ### Testing Local
 - **Sandbox**: https://3000-i8qh3aowtsi1cskm7t6pw-ad490db5.sandbox.novita.ai
