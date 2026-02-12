@@ -639,6 +639,404 @@ const LoginScreen = () => {
   );
 };
 
+// ==================== LISTA COMPLETA DE DISPOSITIVOS ====================
+const DevicesList = ({ devices, systems, onSelectDevice, userRole, residenceId, token, onDevicesChange }) => {
+  const [editingDevice, setEditingDevice] = React.useState(null);
+  const [newDevice, setNewDevice] = React.useState({
+    name: '',
+    ip: '',
+    mac: '',
+    brand: '',
+    model: '',
+    serial: '',
+    firmware: '',
+    username: 'admin',
+    password: '',
+    status: 'Online'
+  });
+  const [searchTerm, setSearchTerm] = React.useState('');
+
+  // Detectar IPs duplicadas
+  const getIPConflicts = () => {
+    const ipCount = {};
+    devices.forEach(device => {
+      if (device.ip) {
+        ipCount[device.ip] = (ipCount[device.ip] || 0) + 1;
+      }
+    });
+    return Object.keys(ipCount).filter(ip => ipCount[ip] > 1);
+  };
+
+  const conflictIPs = getIPConflicts();
+
+  const handleEditDevice = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch(`/api/devices/${editingDevice.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(newDevice)
+      });
+      const data = await response.json();
+      if (data.success) {
+        setEditingDevice(null);
+        setNewDevice({
+          name: '',
+          ip: '',
+          mac: '',
+          brand: '',
+          model: '',
+          serial: '',
+          firmware: '',
+          username: 'admin',
+          password: '',
+          status: 'Online'
+        });
+        if (onDevicesChange) onDevicesChange();
+        alert('Dispositivo actualizado exitosamente');
+      } else {
+        alert('Error: ' + (data.error || 'No se pudo actualizar el dispositivo'));
+      }
+    } catch (error) {
+      console.error('Error updating device:', error);
+      alert('Error al actualizar dispositivo');
+    }
+  };
+
+  const handleDeleteDevice = async (deviceId) => {
+    if (!confirm('¿Estás seguro de eliminar este dispositivo?')) return;
+    
+    try {
+      const response = await fetch(`/api/devices/${deviceId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (data.success) {
+        if (onDevicesChange) onDevicesChange();
+        alert('Dispositivo eliminado');
+      }
+    } catch (error) {
+      console.error('Error deleting device:', error);
+    }
+  };
+
+  const openEditModal = (device) => {
+    setEditingDevice(device);
+    setNewDevice({
+      name: device.name,
+      ip: device.ip,
+      mac: device.mac,
+      brand: device.brand,
+      model: device.model,
+      serial: device.serial,
+      firmware: device.firmware,
+      username: device.username,
+      password: device.password,
+      status: device.status
+    });
+  };
+
+  const getSystemName = (systemId) => {
+    const system = systems.find(s => s.id === systemId);
+    return system ? system.name : 'Unknown';
+  };
+
+  // Filtrar dispositivos por búsqueda
+  const filteredDevices = devices.filter(device => {
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      device.name.toLowerCase().includes(searchLower) ||
+      device.ip.toLowerCase().includes(searchLower) ||
+      device.brand.toLowerCase().includes(searchLower) ||
+      device.model.toLowerCase().includes(searchLower) ||
+      getSystemName(device.system_id).toLowerCase().includes(searchLower)
+    );
+  });
+
+  return (
+    <div className="animate-in fade-in slide-in-from-bottom-4 duration-1000">
+      {/* Header con búsqueda */}
+      <div className="mb-12">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h3 className="text-4xl font-extralight text-slate-950 tracking-tighter mb-2">Todos los Dispositivos</h3>
+            <p className="text-sm text-slate-500">{filteredDevices.length} dispositivos encontrados</p>
+          </div>
+        </div>
+
+        {/* Barra de búsqueda */}
+        <div className="relative">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Buscar por nombre, IP, marca, modelo o sistema..."
+            className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent text-sm"
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-900"
+            >
+              ✖
+            </button>
+          )}
+        </div>
+
+        {/* Alerta de conflictos IP */}
+        {conflictIPs.length > 0 && (
+          <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-center gap-2 text-red-800">
+              <span className="text-lg">⚠️</span>
+              <div>
+                <p className="font-semibold text-sm">Conflictos de IP Detectados</p>
+                <p className="text-xs text-red-700 mt-1">
+                  Las siguientes IPs están duplicadas: {conflictIPs.join(', ')}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Modal de edición */}
+      {editingDevice && (
+        <div className="mb-8 bg-white rounded-lg border border-slate-200 p-6 animate-in">
+          <h3 className="text-lg font-bold text-slate-800 mb-4">Editar Dispositivo</h3>
+          <form onSubmit={handleEditDevice} className="space-y-4">
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Nombre</label>
+                <input
+                  type="text"
+                  required
+                  value={newDevice.name}
+                  onChange={(e) => setNewDevice({...newDevice, name: e.target.value})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">IP Address</label>
+                <input
+                  type="text"
+                  required
+                  value={newDevice.ip}
+                  onChange={(e) => setNewDevice({...newDevice, ip: e.target.value})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">MAC Address</label>
+                <input
+                  type="text"
+                  required
+                  value={newDevice.mac}
+                  onChange={(e) => setNewDevice({...newDevice, mac: e.target.value})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent text-sm"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Marca</label>
+                <input
+                  type="text"
+                  required
+                  value={newDevice.brand}
+                  onChange={(e) => setNewDevice({...newDevice, brand: e.target.value})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Modelo</label>
+                <input
+                  type="text"
+                  required
+                  value={newDevice.model}
+                  onChange={(e) => setNewDevice({...newDevice, model: e.target.value})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Serial</label>
+                <input
+                  type="text"
+                  required
+                  value={newDevice.serial}
+                  onChange={(e) => setNewDevice({...newDevice, serial: e.target.value})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent text-sm"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-4 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Firmware</label>
+                <input
+                  type="text"
+                  required
+                  value={newDevice.firmware}
+                  onChange={(e) => setNewDevice({...newDevice, firmware: e.target.value})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Username</label>
+                <input
+                  type="text"
+                  value={newDevice.username}
+                  onChange={(e) => setNewDevice({...newDevice, username: e.target.value})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+                <input
+                  type="password"
+                  value={newDevice.password}
+                  onChange={(e) => setNewDevice({...newDevice, password: e.target.value})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Estado</label>
+                <select
+                  value={newDevice.status}
+                  onChange={(e) => setNewDevice({...newDevice, status: e.target.value})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent text-sm"
+                >
+                  <option value="Online">Online</option>
+                  <option value="Offline">Offline</option>
+                  <option value="Maintenance">Mantenimiento</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex justify-end space-x-3 pt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingDevice(null);
+                  setNewDevice({
+                    name: '',
+                    ip: '',
+                    mac: '',
+                    brand: '',
+                    model: '',
+                    serial: '',
+                    firmware: '',
+                    username: 'admin',
+                    password: '',
+                    status: 'Online'
+                  });
+                }}
+                className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors text-sm"
+              >
+                Actualizar Dispositivo
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Tabla de dispositivos */}
+      <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+        <table className="w-full">
+          <thead className="bg-slate-50 border-b border-slate-200">
+            <tr>
+              <th className="px-4 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Nombre</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">IP</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Sistema</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Marca/Modelo</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Estado</th>
+              <th className="px-4 py-3 text-right text-xs font-medium text-slate-700 uppercase tracking-wider">Acciones</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-200">
+            {filteredDevices.map((device) => {
+              const hasIPConflict = conflictIPs.includes(device.ip);
+              return (
+                <tr key={device.id} className={`hover:bg-slate-50 ${hasIPConflict ? 'bg-red-50' : ''}`}>
+                  <td className="px-4 py-4">
+                    <div className="text-sm font-medium text-slate-900">{device.name}</div>
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className={`text-sm font-mono ${hasIPConflict ? 'text-red-700 font-bold' : 'text-slate-600'}`}>
+                      {device.ip}
+                      {hasIPConflict && <span className="ml-2 text-xs">⚠️ DUPLICADA</span>}
+                    </div>
+                  </td>
+                  <td className="px-4 py-4">
+                    <span className="px-2 py-1 text-xs bg-slate-100 text-slate-700 rounded">
+                      {getSystemName(device.system_id)}
+                    </span>
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className="text-sm text-slate-600">{device.brand} {device.model}</div>
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${
+                        device.status === 'Online' ? 'bg-emerald-500' : 
+                        device.status === 'Maintenance' ? 'bg-yellow-500' : 'bg-slate-300'
+                      }`} />
+                      <span className="text-xs text-slate-600">{device.status}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-4 text-right">
+                    <div className="flex justify-end space-x-2">
+                      <button
+                        onClick={() => onSelectDevice(device)}
+                        className="text-slate-600 hover:text-slate-900 text-xs font-medium px-3 py-1 border border-slate-200 rounded hover:bg-slate-50"
+                        title="Ver detalles"
+                      >
+                        Detalles
+                      </button>
+                      {userRole === 'admin' && (
+                        <>
+                          <button
+                            onClick={() => openEditModal(device)}
+                            className="text-slate-600 hover:text-slate-900 text-xs font-medium px-3 py-1 border border-slate-200 rounded hover:bg-slate-50"
+                            title="Editar"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            onClick={() => handleDeleteDevice(device.id)}
+                            className="text-red-600 hover:text-red-800 text-xs font-medium px-3 py-1 border border-red-200 rounded hover:bg-red-50"
+                            title="Eliminar"
+                          >
+                            Eliminar
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+
+        {filteredDevices.length === 0 && (
+          <div className="text-center py-12">
+            <div className="text-6xl mb-4">🔍</div>
+            <div className="text-slate-400">No se encontraron dispositivos</div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // Grid de Sistemas
 const SystemsGrid = ({ systems, devices, onSelectSystem }) => {
   const getDeviceCount = (systemId) => {
@@ -1125,6 +1523,7 @@ const App = () => {
   const [activeTab, setActiveTab] = useState('systems');
   const [selectedSystem, setSelectedSystem] = useState(null);
   const [selectedDevice, setSelectedDevice] = useState(null);
+  const [devicesViewMode, setDevicesViewMode] = useState('grid'); // 'grid' o 'list'
 
   const [residences, setResidences] = useState([]);
   const [residenceDetails, setResidenceDetails] = useState(null);
@@ -1223,12 +1622,53 @@ const App = () => {
             />
           );
         }
+        
+        // Botón para cambiar vista
         return (
-          <SystemsGrid 
-            systems={systems}
-            devices={devices}
-            onSelectSystem={setSelectedSystem}
-          />
+          <div>
+            <div className="flex justify-end mb-8">
+              <div className="flex gap-2 bg-white border border-slate-200 rounded-lg p-1">
+                <button
+                  onClick={() => setDevicesViewMode('grid')}
+                  className={`px-4 py-2 text-xs font-medium rounded transition-colors ${
+                    devicesViewMode === 'grid'
+                      ? 'bg-slate-900 text-white'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  🔲 Por Sistema
+                </button>
+                <button
+                  onClick={() => setDevicesViewMode('list')}
+                  className={`px-4 py-2 text-xs font-medium rounded transition-colors ${
+                    devicesViewMode === 'list'
+                      ? 'bg-slate-900 text-white'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  📋 Lista Completa
+                </button>
+              </div>
+            </div>
+            
+            {devicesViewMode === 'grid' ? (
+              <SystemsGrid 
+                systems={systems}
+                devices={devices}
+                onSelectSystem={setSelectedSystem}
+              />
+            ) : (
+              <DevicesList
+                devices={devices}
+                systems={systems}
+                onSelectDevice={setSelectedDevice}
+                userRole={user?.role}
+                residenceId={currentResidence.id}
+                token={token}
+                onDevicesChange={loadResidenceDetails}
+              />
+            )}
+          </div>
         );
       }
 
