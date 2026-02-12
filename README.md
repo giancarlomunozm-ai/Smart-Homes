@@ -1,433 +1,267 @@
 # Smart Spaces - Infrastructure OS
 
-Sistema de gestión inteligente de residencias con control de dispositivos de automatización, seguridad y monitoreo.
+Sistema de gestión inteligente de residencias con control de acceso multinivel para equipos técnicos y propietarios.
 
-## 🎯 Descripción del Proyecto
+## 🔗 URLs de Acceso
 
-**Smart Spaces** es una plataforma completa de gestión de infraestructura para residencias inteligentes. Permite al equipo de Smart Spaces y a los clientes finales monitorear, gestionar y controlar todos los dispositivos y sistemas instalados en cada propiedad.
+- **Aplicación Local**: https://3000-i8qh3aowtsi1cskm7t6pw-ad490db5.sandbox.novita.ai
+- **API Health Check**: https://3000-i8qh3aowtsi1cskm7t6pw-ad490db5.sandbox.novita.ai/api/health
 
-### Características Principales
-
-✅ **Sistema de Autenticación de Dos Niveles**
-- **Administradores** (equipo Smart Spaces): Acceso completo a todas las residencias y funciones de gestión
-- **Clientes**: Acceso restringido solo a sus residencias asignadas
-
-✅ **Gestión Completa de Residencias**
-- Visualización de portafolio completo (admin) o residencias asignadas (clientes)
-- Información detallada de cada propiedad
-- Estados operacionales en tiempo real
-
-✅ **Monitoreo de Sistemas por Categoría**
-- Iluminación (Lighting)
-- Audio/Video (Media)
-- Red (Network)
-- Seguridad/CCTV (Security)
-- Control de Acceso (Entry)
-- Cortinas/Persianas (Shades)
-- Automatización (Logic)
-
-✅ **Gestión de Dispositivos**
-- Inventario completo de dispositivos por residencia
-- Detalles técnicos: IP, MAC, firmware, serial
-- Credenciales de acceso seguras
-- Estados operacionales (Online, Offline, Maintenance)
-
-✅ **Interfaz Premium**
-- Diseño minimalista y elegante
-- Animaciones fluidas
-- Responsive design
-- Inspirada en sistemas de alta gama
-
-## 🌐 URLs de Acceso
-
-### Desarrollo Local (Sandbox)
-- **Aplicación**: https://3000-i8qh3aowtsi1cskm7t6pw-ad490db5.sandbox.novita.ai
-- **API Health**: https://3000-i8qh3aowtsi1cskm7t6pw-ad490db5.sandbox.novita.ai/api/health
-- **API Base**: https://3000-i8qh3aowtsi1cskm7t6pw-ad490db5.sandbox.novita.ai/api
-
-### Producción (Por desplegar)
-- **Cloudflare Pages**: (pendiente de despliegue)
-
-## 🔐 Credenciales de Acceso
+## 🔑 Credenciales de Acceso
 
 ### Usuario Administrador (Equipo Smart Spaces)
-```
-Email: admin@smartspaces.com
-Password: admin123
-```
-**Permisos:** Acceso completo a todas las residencias, gestión de dispositivos, asignación de clientes
+- **Email**: `admin@smartspaces.com`
+- **Contraseña**: `admin123`
+- **Permisos**: Acceso total a todas las residencias, gestión de dispositivos, creación de usuarios
 
-### Usuarios Clientes
+### Usuarios Clientes (Propietarios)
 
 **Cliente 1 - Juan Pérez**
-```
-Email: cliente1@example.com
-Password: cliente123
-```
-**Acceso a:** Residencial Valle Real (H-001)
+- **Email**: `cliente1@example.com`
+- **Contraseña**: `cliente123`
+- **Acceso**: Solo residencia H-001 (Residencial Valle Real)
 
 **Cliente 2 - María García**
+- **Email**: `cliente2@example.com`
+- **Contraseña**: `cliente123`
+- **Acceso**: Solo residencia H-002 (Villa Montana)
+
+## 📋 Características Implementadas
+
+### ✅ Sistema de Autenticación Completo
+- Login con JWT (Web Crypto API)
+- Dos niveles de acceso: Admin y Cliente
+- Tokens con expiración de 24 horas
+- Verificación automática de sesión
+
+### ✅ Panel de Administración (Admin)
+- **Vista de todas las residencias**: Acceso completo al portfolio
+- **Gestión de dispositivos**: CRUD completo de equipos
+- **Asignación de accesos**: Vincular residencias a clientes
+- **Monitoreo global**: Ver estados y eventos de todo el sistema
+
+### ✅ Panel de Cliente (Propietarios)
+- **Vista limitada**: Solo residencias asignadas
+- **Consulta de dispositivos**: Ver equipos de sus propiedades
+- **Información de acceso**: Credenciales de red y sistemas
+- **Sin permisos de modificación**: Solo lectura
+
+### ✅ Gestión de Residencias
+- 3 residencias de ejemplo precargadas
+- Estados: Operational, Maintenance, Offline
+- Asignación flexible usuario-residencia
+
+### ✅ Sistemas y Dispositivos
+- **7 categorías de sistemas**:
+  - Lighting (Iluminación)
+  - Media (Audio/Video)
+  - Network (Redes)
+  - Security (Seguridad/CCTV)
+  - Entry (Control de Acceso)
+  - Shades (Cortinas/Persianas)
+  - Logic (Automatización)
+
+- **11 dispositivos de ejemplo** distribuidos en 3 residencias:
+  - Routers Ubiquiti
+  - Sistemas CCTV Hikvision
+  - Controles Lutron
+  - Equipos Sonos y Denon
+
+### ✅ Base de Datos D1 (SQLite)
+- Esquema completo con relaciones
+- Migraciones versionadas
+- Datos de seed para desarrollo
+- Índices optimizados
+
+### ✅ API REST Completa
 ```
-Email: cliente2@example.com
-Password: cliente123
-```
-**Acceso a:** Villa Montana (H-002)
+POST   /api/auth/login         - Iniciar sesión
+GET    /api/auth/verify        - Verificar token
 
-## 📊 Arquitectura de Datos
+GET    /api/residences         - Listar residencias (según permisos)
+GET    /api/residences/:id     - Detalle de residencia
+POST   /api/residences         - Crear residencia (admin)
+PUT    /api/residences/:id     - Actualizar residencia (admin)
+DELETE /api/residences/:id     - Eliminar residencia (admin)
 
-### Modelo de Base de Datos (Cloudflare D1)
+GET    /api/devices/residence/:id  - Dispositivos de una residencia
+GET    /api/devices/:id            - Detalle de dispositivo
+POST   /api/devices                - Crear dispositivo (admin)
+PUT    /api/devices/:id            - Actualizar dispositivo (admin)
+DELETE /api/devices/:id            - Eliminar dispositivo (admin)
 
-**Tablas Principales:**
+GET    /api/systems            - Listar todos los sistemas
+GET    /api/systems/:id/stats  - Estadísticas de un sistema
 
-1. **users** - Usuarios del sistema
-   - id, email, password (hash SHA-256), name, role (admin/client)
-   
-2. **residences** - Propiedades gestionadas
-   - id, name, address, image, status (Operational/Maintenance/Offline)
-   
-3. **user_residences** - Asignación de clientes a residencias
-   - user_id, residence_id
-
-4. **systems** - Categorías de sistemas
-   - id, name, icon
-
-5. **devices** - Dispositivos instalados
-   - residence_id, system_id, name, brand, model, serial
-   - ip, mac, firmware, username, password, status
-
-6. **events** - Historial de eventos
-   - residence_id, device_id, user_id, event_type, description
-
-### Flujo de Datos
-
-```
-Usuario → Login (JWT) → API Backend → D1 Database → Respuesta JSON → Frontend React
+GET    /api/events/residence/:id  - Eventos de una residencia
+GET    /api/events                - Eventos globales (admin)
 ```
 
-## 🚀 Stack Tecnológico
+## 🏗️ Arquitectura Técnica
 
 ### Backend
-- **Framework**: Hono (lightweight web framework)
+- **Framework**: Hono (edge-optimized)
 - **Runtime**: Cloudflare Workers
-- **Base de Datos**: Cloudflare D1 (SQLite distribuido)
+- **Base de datos**: Cloudflare D1 (SQLite)
 - **Autenticación**: JWT con Web Crypto API
-- **Seguridad**: Hash SHA-256 para contraseñas
+- **Hashing**: SHA-256 para contraseñas
 
 ### Frontend
-- **Framework UI**: React 18 (via CDN)
-- **Estilos**: Tailwind CSS (via CDN)
-- **Transpiler**: Babel Standalone
-- **State Management**: React Hooks + Context API
+- **Biblioteca**: React 18 (UMD)
+- **Estilos**: TailwindCSS vía CDN
+- **Estado**: React Hooks + Context API
+- **Transpilación**: Babel Standalone
 
-### Infraestructura
-- **Desarrollo Local**: Wrangler + PM2
-- **Producción**: Cloudflare Pages
-- **CI/CD**: Git + Wrangler CLI
+### Deployment
+- **Plataforma**: Cloudflare Pages
+- **Build Tool**: Vite
+- **Process Manager**: PM2 (desarrollo local)
 
 ## 📁 Estructura del Proyecto
 
 ```
 webapp/
 ├── src/
-│   ├── index.tsx                 # Aplicación principal Hono
+│   ├── index.tsx              # Aplicación principal Hono
 │   ├── routes/
-│   │   ├── auth.ts              # Rutas de autenticación
-│   │   ├── residences.ts        # Gestión de residencias
-│   │   ├── devices.ts           # Gestión de dispositivos
-│   │   ├── systems.ts           # Sistemas disponibles
-│   │   └── events.ts            # Historial de eventos
+│   │   ├── auth.ts            # Rutas de autenticación
+│   │   ├── residences.ts      # Gestión de residencias
+│   │   ├── devices.ts         # Gestión de dispositivos
+│   │   ├── systems.ts         # Consulta de sistemas
+│   │   └── events.ts          # Historial de eventos
 │   ├── middleware/
-│   │   └── auth.ts              # Middleware de autenticación
+│   │   └── auth.ts            # Middleware de autenticación
 │   └── utils/
-│       ├── jwt.ts               # Utilidades JWT
-│       └── password.ts          # Hash de contraseñas
+│       ├── jwt.ts             # Utilidades JWT
+│       └── password.ts        # Hashing de contraseñas
 ├── public/
-│   └── app.js                   # Aplicación React frontend
+│   └── app.js                 # Aplicación React completa
 ├── migrations/
 │   └── 0001_initial_schema.sql  # Esquema de base de datos
-├── dist/                        # Build output (generado)
-├── seed.sql                     # Datos de ejemplo
-├── wrangler.jsonc              # Configuración Cloudflare
-├── ecosystem.config.cjs        # Configuración PM2
-├── package.json                # Dependencias
-└── README.md                   # Este archivo
+├── seed.sql                   # Datos de ejemplo
+├── wrangler.jsonc            # Configuración Cloudflare
+├── ecosystem.config.cjs      # Configuración PM2
+├── package.json              # Dependencias
+└── README.md                 # Este archivo
 ```
 
-## 🔧 API REST Endpoints
+## 🗄️ Modelo de Datos
 
-### Autenticación
-- `POST /api/auth/login` - Iniciar sesión
-- `GET /api/auth/verify` - Verificar token
-- `POST /api/auth/register` - Registrar usuario (admin only)
+### Tablas Principales
+- **users**: Usuarios (admin/client)
+- **residences**: Propiedades inmobiliarias
+- **user_residences**: Asignación usuario-residencia
+- **systems**: Categorías de sistemas
+- **devices**: Dispositivos IoT/Smart Home
+- **events**: Historial de actividad
+
+### Relaciones
+- Un usuario puede tener múltiples residencias asignadas
+- Una residencia puede tener múltiples dispositivos
+- Un dispositivo pertenece a un sistema y una residencia
+- Los eventos se registran por residencia y dispositivo
+
+## 🚀 Comandos Disponibles
+
+```bash
+# Desarrollo
+npm run dev              # Servidor Vite local
+npm run dev:sandbox      # Wrangler Pages dev en 0.0.0.0:3000
+
+# Build y Deploy
+npm run build            # Construir proyecto
+npm run preview          # Preview local
+npm run deploy           # Deploy a Cloudflare Pages
+
+# Base de datos
+npm run db:migrate:local # Aplicar migraciones (local)
+npm run db:migrate:prod  # Aplicar migraciones (producción)
+npm run db:seed          # Cargar datos de ejemplo
+npm run db:reset         # Resetear BD completa
+
+# PM2 (Desarrollo local)
+pm2 start ecosystem.config.cjs  # Iniciar
+pm2 restart webapp              # Reiniciar
+pm2 stop webapp                 # Detener
+pm2 logs webapp --nostream      # Ver logs
+pm2 delete webapp               # Eliminar
+```
+
+## 🔐 Seguridad Implementada
+
+1. **Autenticación JWT**: Tokens seguros con expiración
+2. **Control de acceso por roles**: Admin vs Cliente
+3. **Validación de permisos**: Middleware en todas las rutas protegidas
+4. **Aislamiento de datos**: Clientes solo ven sus residencias
+5. **Hashing de contraseñas**: SHA-256 (actualizar a bcrypt en producción)
+
+## 📊 Datos de Ejemplo
 
 ### Residencias
-- `GET /api/residences` - Listar residencias (filtrado por rol)
-- `GET /api/residences/:id` - Detalles de residencia
-- `POST /api/residences` - Crear residencia (admin only)
-- `PUT /api/residences/:id` - Actualizar residencia (admin only)
-- `DELETE /api/residences/:id` - Eliminar residencia (admin only)
-- `POST /api/residences/:id/assign` - Asignar residencia a cliente (admin only)
-- `DELETE /api/residences/:id/assign/:userId` - Desasignar (admin only)
+- **H-001**: Residencial Valle Real (Zapopan, Jal.) - 4 dispositivos
+- **H-002**: Villa Montana (Monterrey, NL.) - 3 dispositivos
+- **H-003**: Penthouse Reforma (CDMX) - 3 dispositivos
 
-### Dispositivos
-- `GET /api/devices/residence/:residenceId` - Dispositivos por residencia
-- `GET /api/devices/:id` - Detalles de dispositivo
-- `POST /api/devices` - Crear dispositivo (admin only)
-- `PUT /api/devices/:id` - Actualizar dispositivo (admin only)
-- `DELETE /api/devices/:id` - Eliminar dispositivo (admin only)
-- `GET /api/devices/system/:systemId` - Dispositivos por sistema
+### Asignaciones
+- Juan Pérez → H-001
+- María García → H-002
+- Admin → Todas
 
-### Sistemas
-- `GET /api/systems` - Listar todos los sistemas
-- `GET /api/systems/:id/stats` - Estadísticas de sistema
+## 🎨 Interfaz de Usuario
 
-### Eventos
-- `GET /api/events/residence/:residenceId` - Eventos por residencia
-- `GET /api/events` - Todos los eventos (admin only)
+### Características Visuales
+- Diseño minimalista y elegante
+- Tipografía Inter con espaciado amplio
+- Animaciones suaves y transiciones
+- Modo grayscale con hover colorizado
+- Panel lateral deslizante para detalles
+- Responsive design completo
 
-## 🛠️ Comandos Disponibles
+### Flujos de Navegación
+1. **Login** → Pantalla de autenticación
+2. **Directory** → Grid de residencias disponibles
+3. **Dashboard** → Vista detallada de residencia
+   - Tab Systems: Grid de sistemas
+   - System Detail: Lista de dispositivos
+   - Device Panel: Información técnica completa
 
-### Desarrollo
-```bash
-npm run dev              # Servidor desarrollo Vite (sin D1)
-npm run dev:sandbox      # Wrangler local con D1 (sandbox)
-npm run build            # Construir para producción
-npm run preview          # Preview build local
-```
+## 🔧 Siguientes Pasos Recomendados
 
-### Base de Datos
-```bash
-npm run db:migrate:local # Aplicar migraciones local
-npm run db:migrate:prod  # Aplicar migraciones producción
-npm run db:seed          # Cargar datos de ejemplo
-npm run db:reset         # Resetear BD local completamente
-```
+### Mejoras de Seguridad
+- [ ] Implementar bcrypt real (vía API externa)
+- [ ] Rate limiting en endpoints
+- [ ] HTTPS en producción
+- [ ] Refresh tokens
+- [ ] 2FA para administradores
 
-### Despliegue
-```bash
-npm run deploy           # Build + Deploy a Cloudflare Pages
-npm run deploy:prod      # Deploy con nombre de proyecto
-```
+### Funcionalidades Adicionales
+- [ ] Tab "History": Línea de tiempo de eventos
+- [ ] Tab "Support": Sistema de tickets
+- [ ] Panel de creación de residencias (admin)
+- [ ] Panel de creación de dispositivos (admin)
+- [ ] Gestión de usuarios (admin)
+- [ ] Filtros y búsqueda
+- [ ] Exportar reportes
 
-### PM2 (Desarrollo Local)
-```bash
-pm2 start ecosystem.config.cjs   # Iniciar aplicación
-pm2 restart webapp               # Reiniciar
-pm2 logs webapp --nostream       # Ver logs
-pm2 stop webapp                  # Detener
-pm2 delete webapp                # Eliminar de PM2
-```
+### Optimizaciones
+- [ ] Caché de consultas frecuentes
+- [ ] Paginación en listas grandes
+- [ ] WebSockets para actualizaciones en tiempo real
+- [ ] PWA para acceso offline
 
-## 🎨 Funcionalidades Implementadas
+## 📝 Notas de Desarrollo
 
-### ✅ Sistema de Login
-- Validación de credenciales contra D1
-- Generación de JWT tokens
-- Almacenamiento seguro en localStorage
-- Verificación automática al cargar
+- **Puerto local**: 3000
+- **Base de datos**: SQLite local en `.wrangler/state/v3/d1/`
+- **JWT Secret**: Configurado en `wrangler.jsonc` (cambiar en producción)
+- **Logs PM2**: `/home/user/.pm2/logs/`
 
-### ✅ Panel de Residencias
-- Grid de tarjetas con imágenes
-- Estados operacionales
-- Hover effects premium
-- Filtrado automático por rol de usuario
+## 👨‍💻 Autor
 
-### ✅ Dashboard de Residencia
-- Header con información completa
-- Navegación por tabs (Systems, History, Support)
-- Diseño con overlay de imagen de fondo
-
-### ✅ Grid de Sistemas
-- Iconos animados por categoría
-- Contador de dispositivos
-- Transiciones suaves
-- Arquitectura modular
-
-### ✅ Lista de Dispositivos
-- Agrupación por sistema
-- Información técnica completa
-- Indicadores de estado (Online/Offline/Maintenance)
-- Click para ver detalles
-
-### ✅ Panel de Detalles
-- Slide-over lateral
-- Información completa del dispositivo
-- Credenciales con toggle de visibilidad
-- Datos técnicos: IP, MAC, Firmware, Serial
-
-## 📋 Próximos Pasos Recomendados
-
-### Fase 1: Mejoras de UX/UI (1-2 semanas)
-- [ ] Agregar búsqueda global de dispositivos
-- [ ] Filtros avanzados por sistema/estado
-- [ ] Dark mode toggle
-- [ ] Notificaciones toast para acciones
-- [ ] Indicadores de carga más detallados
-
-### Fase 2: Funcionalidades Avanzadas (2-3 semanas)
-- [ ] Implementar tab "History" con eventos reales
-- [ ] Sistema de tickets de soporte (tab "Support")
-- [ ] Dashboard con gráficas y estadísticas
-- [ ] Exportación de reportes (PDF/Excel)
-- [ ] Gestión de usuarios admin
-
-### Fase 3: Gestión CRUD Completa (1-2 semanas)
-- [ ] Formularios para crear/editar residencias
-- [ ] Formularios para crear/editar dispositivos
-- [ ] Asignación de clientes a residencias
-- [ ] Gestión de permisos granulares
-- [ ] Validaciones de formularios
-
-### Fase 4: Optimización y Producción (1 semana)
-- [ ] Tests automatizados (unit + integration)
-- [ ] Optimización de queries D1
-- [ ] CDN para assets estáticos
-- [ ] Monitoreo con Cloudflare Analytics
-- [ ] Rate limiting y seguridad
-
-### Fase 5: Funcionalidades Pro (3-4 semanas)
-- [ ] Control remoto de dispositivos (si API disponible)
-- [ ] Automatizaciones y escenas
-- [ ] Integración con webhooks
-- [ ] Aplicación móvil (PWA)
-- [ ] Sistema de alertas en tiempo real
-
-## 🔒 Seguridad
-
-### Implementado
-- ✅ Autenticación JWT con expiración (24h)
-- ✅ Contraseñas hasheadas (SHA-256)
-- ✅ Validación de tokens en cada request
-- ✅ Control de acceso basado en roles (RBAC)
-- ✅ Filtrado de datos por permisos de usuario
-- ✅ CORS configurado correctamente
-
-### Recomendaciones para Producción
-- [ ] Implementar bcrypt/Argon2 para contraseñas
-- [ ] Rate limiting en endpoints de login
-- [ ] HTTPS obligatorio (Cloudflare lo provee)
-- [ ] Rotación periódica de JWT_SECRET
-- [ ] Logs de auditoría de accesos
-- [ ] 2FA opcional para administradores
-
-## 📱 Responsive Design
-
-La aplicación es completamente responsive y funciona en:
-- ✅ Desktop (1920px+)
-- ✅ Laptop (1366px)
-- ✅ Tablet (768px)
-- ✅ Mobile (375px)
-
-## 🤝 Guía de Usuario
-
-### Para Administradores
-1. **Login** con credenciales de admin
-2. **Ver todas las residencias** en el directorio
-3. **Acceder a cualquier residencia** haciendo click
-4. **Navegar por sistemas** en la vista de dashboard
-5. **Ver dispositivos** por categoría
-6. **Revisar detalles técnicos** de cada dispositivo
-7. **Cerrar sesión** desde el header
-
-### Para Clientes
-1. **Login** con credenciales de cliente
-2. **Ver solo residencias asignadas** en el directorio
-3. **Acceder a su(s) residencia(s)** 
-4. **Monitorear sistemas y dispositivos** instalados
-5. **Consultar credenciales** de acceso a dispositivos
-6. **Reportar incidencias** (próximamente en tab Support)
-
-## 📦 Despliegue a Producción
-
-### Requisitos Previos
-1. Cuenta de Cloudflare con Workers habilitado
-2. API Token de Cloudflare configurado
-3. Base de datos D1 creada en producción
-
-### Pasos de Despliegue
-```bash
-# 1. Crear base de datos D1 en producción
-npx wrangler d1 create webapp-production
-
-# 2. Copiar database_id al wrangler.jsonc
-
-# 3. Aplicar migraciones en producción
-npm run db:migrate:prod
-
-# 4. Cargar datos iniciales (opcional)
-npx wrangler d1 execute webapp-production --file=./seed.sql
-
-# 5. Configurar secretos
-npx wrangler secret put JWT_SECRET --project-name webapp
-
-# 6. Desplegar
-npm run deploy:prod
-```
-
-## 📊 Estado del Proyecto
-
-**Versión Actual:** 1.0.0 (MVP)
-
-**Completado:**
-- [x] Sistema de autenticación completo
-- [x] Base de datos D1 con esquema completo
-- [x] API REST completa con control de acceso
-- [x] Interfaz de usuario premium replicada
-- [x] Gestión de residencias
-- [x] Monitoreo de dispositivos por sistema
-- [x] Panel de detalles de dispositivos
-- [x] Responsive design
-
-**En Desarrollo:**
-- [ ] Tab de historial de eventos
-- [ ] Tab de soporte/tickets
-- [ ] Formularios CRUD de gestión
-
-**Por Desarrollar:**
-- [ ] Dashboard con gráficas
-- [ ] Exportación de reportes
-- [ ] Sistema de notificaciones
-- [ ] Control remoto de dispositivos
-
-## 🐛 Problemas Conocidos
-
-Ninguno reportado en el MVP actual.
-
-## 📝 Notas Técnicas
-
-### Contraseñas Hasheadas
-Las contraseñas en la base de datos están hasheadas con SHA-256:
-- `admin123` → `b3c0d3f1a7c9e5d8f2a4b6e8c1d3f5a7b9c0e2f4a6b8d0f2e4c6a8b0d2f4e6a8`
-- `cliente123` → `f7a9c1e3b5d7f9a1c3e5b7d9f1a3c5e7b9d1f3a5c7e9b1d3f5a7c9e1b3d5f7a9`
-
-Para producción, se recomienda usar bcrypt o Argon2.
-
-### JWT Secret
-El secret JWT actual es de desarrollo: `your-secret-key-change-in-production`
-
-Para producción, generar uno aleatorio y seguro:
-```bash
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-```
-
-### Base de Datos Local
-La base de datos local se encuentra en: `.wrangler/state/v3/d1/`
-
-Para resetear completamente:
-```bash
-npm run db:reset
-```
-
-## 👨‍💻 Información del Desarrollador
-
-- **Proyecto:** Smart Spaces - Infrastructure OS
-- **Cliente:** Equipo Smart Spaces
-- **Fecha de Inicio:** 2026-02-12
-- **Estado:** MVP Completado ✅
-- **Última Actualización:** 2026-02-12
+Desarrollado para **Smart Spaces** - Global Automation & Design
 
 ---
 
-**Smart Spaces** - *Global Automation & Design © 2024*
-
-*Encrypted Infrastructure - Relay: 10.0.4.1 — Stable*
+**Versión**: 1.0.0  
+**Última actualización**: 2026-02-12  
+**Estado**: ✅ Desarrollo Completo - Listo para Pruebas
