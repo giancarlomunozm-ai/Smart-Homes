@@ -30,7 +30,8 @@ users.get('/', async (c) => {
       query = db.prepare(`
         SELECT 
           u.id, u.email, u.name, u.role, u.created_at,
-          GROUP_CONCAT(ur.residence_id) as residences
+          GROUP_CONCAT(ur.residence_id) as residences,
+          COUNT(DISTINCT ur.residence_id) as residence_count
         FROM users u
         LEFT JOIN user_residences ur ON u.id = ur.user_id
         WHERE u.id != ?
@@ -42,7 +43,8 @@ users.get('/', async (c) => {
       query = db.prepare(`
         SELECT DISTINCT
           u.id, u.email, u.name, u.role, u.created_at,
-          GROUP_CONCAT(DISTINCT ur2.residence_id) as residences
+          GROUP_CONCAT(DISTINCT ur2.residence_id) as residences,
+          COUNT(DISTINCT ur2.residence_id) as residence_count
         FROM users u
         INNER JOIN user_residences ur ON u.id = ur.user_id
         INNER JOIN user_residences ur1 ON ur.residence_id = ur1.residence_id
@@ -55,10 +57,11 @@ users.get('/', async (c) => {
 
     const result = await query.all();
 
-    // Procesar residencias como array
+    // Procesar residencias como array y agregar conteo
     const usersWithResidences = result.results.map(u => ({
       ...u,
-      residences: u.residences ? u.residences.split(',') : []
+      residences: u.residences ? u.residences.split(',') : [],
+      residence_count: u.residence_count || 0
     }));
 
     return c.json({

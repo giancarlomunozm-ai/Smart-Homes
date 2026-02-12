@@ -677,7 +677,134 @@ const SystemsGrid = ({ systems, devices, onSelectSystem }) => {
 };
 
 // Lista de Dispositivos por Sistema
-const SystemDevices = ({ system, devices, onBack, onSelectDevice }) => {
+const SystemDevices = ({ system, devices, onBack, onSelectDevice, userRole, residenceId, token, onDevicesChange }) => {
+  const [showAddDevice, setShowAddDevice] = React.useState(false);
+  const [editingDevice, setEditingDevice] = React.useState(null);
+  const [newDevice, setNewDevice] = React.useState({
+    name: '',
+    ip: '',
+    mac: '',
+    brand: '',
+    model: '',
+    serial: '',
+    firmware: '',
+    username: 'admin',
+    password: '',
+    status: 'Online'
+  });
+
+  const handleAddDevice = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch('/api/devices', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          ...newDevice,
+          system_id: system.id,
+          residence_id: residenceId
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setNewDevice({
+          name: '',
+          ip: '',
+          mac: '',
+          brand: '',
+          model: '',
+          serial: '',
+          firmware: '',
+          username: 'admin',
+          password: '',
+          status: 'Online'
+        });
+        setShowAddDevice(false);
+        if (onDevicesChange) onDevicesChange();
+        alert('Dispositivo agregado exitosamente');
+      } else {
+        alert('Error: ' + (data.error || 'No se pudo agregar el dispositivo'));
+      }
+    } catch (error) {
+      console.error('Error adding device:', error);
+      alert('Error al agregar dispositivo');
+    }
+  };
+
+  const handleEditDevice = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch(`/api/devices/${editingDevice.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(newDevice)
+      });
+      const data = await response.json();
+      if (data.success) {
+        setEditingDevice(null);
+        setNewDevice({
+          name: '',
+          ip: '',
+          mac: '',
+          brand: '',
+          model: '',
+          serial: '',
+          firmware: '',
+          username: 'admin',
+          password: '',
+          status: 'Online'
+        });
+        if (onDevicesChange) onDevicesChange();
+        alert('Dispositivo actualizado exitosamente');
+      } else {
+        alert('Error: ' + (data.error || 'No se pudo actualizar el dispositivo'));
+      }
+    } catch (error) {
+      console.error('Error updating device:', error);
+      alert('Error al actualizar dispositivo');
+    }
+  };
+
+  const handleDeleteDevice = async (deviceId) => {
+    if (!confirm('¿Estás seguro de eliminar este dispositivo?')) return;
+    
+    try {
+      const response = await fetch(`/api/devices/${deviceId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (data.success) {
+        if (onDevicesChange) onDevicesChange();
+        alert('Dispositivo eliminado');
+      }
+    } catch (error) {
+      console.error('Error deleting device:', error);
+    }
+  };
+
+  const openEditModal = (device) => {
+    setEditingDevice(device);
+    setNewDevice({
+      name: device.name,
+      ip: device.ip,
+      mac: device.mac,
+      brand: device.brand,
+      model: device.model,
+      serial: device.serial,
+      firmware: device.firmware,
+      username: device.username,
+      password: device.password,
+      status: device.status
+    });
+  };
+
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-1000">
       <button 
@@ -690,32 +817,225 @@ const SystemDevices = ({ system, devices, onBack, onSelectDevice }) => {
       <div className="mb-24 flex items-baseline gap-10">
         <h3 className="text-6xl font-extralight text-slate-950 tracking-tighter">{system.name}</h3>
         <div className="h-[1px] flex-1 bg-slate-100" />
-        <div className="flex flex-col items-end">
-          <span className="text-[10px] uppercase tracking-[0.4em] text-slate-950 font-black">Active Nodes</span>
-          <span className="text-[10px] text-slate-400 uppercase tracking-widest">{devices.length} Components</span>
+        <div className="flex flex-col items-end gap-3">
+          <div className="flex flex-col items-end">
+            <span className="text-[10px] uppercase tracking-[0.4em] text-slate-950 font-black">Active Nodes</span>
+            <span className="text-[10px] text-slate-400 uppercase tracking-widest">{devices.length} Components</span>
+          </div>
+          {userRole === 'admin' && (
+            <button
+              onClick={() => setShowAddDevice(true)}
+              className="px-4 py-2 bg-slate-900 text-white rounded text-xs uppercase tracking-wider hover:bg-slate-800 transition-colors"
+            >
+              + Add Device
+            </button>
+          )}
         </div>
       </div>
 
+      {/* Add/Edit Device Modal */}
+      {(showAddDevice || editingDevice) && (
+        <div className="mb-8 bg-white rounded-lg border border-slate-200 p-6 animate-in">
+          <h3 className="text-lg font-bold text-slate-800 mb-4">
+            {editingDevice ? 'Editar Dispositivo' : 'Agregar Nuevo Dispositivo'}
+          </h3>
+          <form onSubmit={editingDevice ? handleEditDevice : handleAddDevice} className="space-y-4">
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Nombre</label>
+                <input
+                  type="text"
+                  required
+                  value={newDevice.name}
+                  onChange={(e) => setNewDevice({...newDevice, name: e.target.value})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent text-sm"
+                  placeholder="Main Switch"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">IP Address</label>
+                <input
+                  type="text"
+                  required
+                  value={newDevice.ip}
+                  onChange={(e) => setNewDevice({...newDevice, ip: e.target.value})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent text-sm"
+                  placeholder="192.168.1.10"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">MAC Address</label>
+                <input
+                  type="text"
+                  required
+                  value={newDevice.mac}
+                  onChange={(e) => setNewDevice({...newDevice, mac: e.target.value})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent text-sm"
+                  placeholder="00:11:22:33:44:55"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Marca</label>
+                <input
+                  type="text"
+                  required
+                  value={newDevice.brand}
+                  onChange={(e) => setNewDevice({...newDevice, brand: e.target.value})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent text-sm"
+                  placeholder="Cisco"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Modelo</label>
+                <input
+                  type="text"
+                  required
+                  value={newDevice.model}
+                  onChange={(e) => setNewDevice({...newDevice, model: e.target.value})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent text-sm"
+                  placeholder="SG350-28"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Serial</label>
+                <input
+                  type="text"
+                  required
+                  value={newDevice.serial}
+                  onChange={(e) => setNewDevice({...newDevice, serial: e.target.value})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent text-sm"
+                  placeholder="SN123456789"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-4 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Firmware</label>
+                <input
+                  type="text"
+                  required
+                  value={newDevice.firmware}
+                  onChange={(e) => setNewDevice({...newDevice, firmware: e.target.value})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent text-sm"
+                  placeholder="v2.5.8"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Username</label>
+                <input
+                  type="text"
+                  value={newDevice.username}
+                  onChange={(e) => setNewDevice({...newDevice, username: e.target.value})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent text-sm"
+                  placeholder="admin"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+                <input
+                  type="password"
+                  value={newDevice.password}
+                  onChange={(e) => setNewDevice({...newDevice, password: e.target.value})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent text-sm"
+                  placeholder="••••••"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Estado</label>
+                <select
+                  value={newDevice.status}
+                  onChange={(e) => setNewDevice({...newDevice, status: e.target.value})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent text-sm"
+                >
+                  <option value="Online">Online</option>
+                  <option value="Offline">Offline</option>
+                  <option value="Maintenance">Mantenimiento</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex justify-end space-x-3 pt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAddDevice(false);
+                  setEditingDevice(null);
+                  setNewDevice({
+                    name: '',
+                    ip: '',
+                    mac: '',
+                    brand: '',
+                    model: '',
+                    serial: '',
+                    firmware: '',
+                    username: 'admin',
+                    password: '',
+                    status: 'Online'
+                  });
+                }}
+                className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors text-sm"
+              >
+                {editingDevice ? 'Actualizar' : 'Agregar'} Dispositivo
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-24 gap-y-20">
         {devices.map(device => (
-          <button 
-            key={device.id}
-            onClick={() => onSelectDevice(device)}
-            className="group text-left space-y-8"
-          >
+          <div key={device.id} className="group text-left space-y-8 relative">
             <div className="h-[3px] w-16 bg-slate-100 group-hover:w-full group-hover:bg-slate-950 transition-all duration-700 ease-in-out" />
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <p className="text-[10px] font-mono tracking-widest text-slate-400 uppercase font-black">{device.ip}</p>
-                <div className={`w-2 h-2 rounded-full transition-colors duration-500 ${
-                  device.status === 'Online' ? 'bg-emerald-500' : 
-                  device.status === 'Maintenance' ? 'bg-yellow-500' : 'bg-slate-200'
-                }`} />
+                <div className="flex items-center gap-3">
+                  <div className={`w-2 h-2 rounded-full transition-colors duration-500 ${
+                    device.status === 'Online' ? 'bg-emerald-500' : 
+                    device.status === 'Maintenance' ? 'bg-yellow-500' : 'bg-slate-200'
+                  }`} />
+                  {userRole === 'admin' && (
+                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openEditModal(device);
+                        }}
+                        className="text-slate-600 hover:text-slate-900 text-xs"
+                        title="Editar"
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteDevice(device.id);
+                        }}
+                        className="text-red-600 hover:text-red-800 text-xs"
+                        title="Eliminar"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
-              <h4 className="text-3xl font-light text-slate-900 group-hover:text-slate-950 transition-colors tracking-tighter leading-tight">{device.name}</h4>
-              <p className="text-[11px] text-slate-500 uppercase tracking-[0.25em] font-black">{device.brand} • {device.model}</p>
+              <button 
+                onClick={() => onSelectDevice(device)}
+                className="w-full text-left"
+              >
+                <h4 className="text-3xl font-light text-slate-900 group-hover:text-slate-950 transition-colors tracking-tighter leading-tight">{device.name}</h4>
+                <p className="text-[11px] text-slate-500 uppercase tracking-[0.25em] font-black">{device.brand} • {device.model}</p>
+              </button>
             </div>
-          </button>
+          </div>
         ))}
       </div>
     </div>
@@ -896,6 +1216,10 @@ const App = () => {
               devices={systemDevices}
               onBack={() => setSelectedSystem(null)}
               onSelectDevice={setSelectedDevice}
+              userRole={user?.role}
+              residenceId={currentResidence.id}
+              token={token}
+              onDevicesChange={loadResidenceDetails}
             />
           );
         }
@@ -1365,6 +1689,13 @@ const UserManagement = ({ token, userRole }) => {
     role: 'client',
     residences: []
   });
+  const [editingUser, setEditingUser] = React.useState(null);
+  const [editUser, setEditUser] = React.useState({
+    id: null,
+    email: '',
+    name: '',
+    residences: []
+  });
 
   React.useEffect(() => {
     if (userRole !== 'admin') {
@@ -1456,6 +1787,55 @@ const UserManagement = ({ token, userRole }) => {
 
   const toggleResidence = (residenceId) => {
     setNewUser(prev => ({
+      ...prev,
+      residences: prev.residences.includes(residenceId)
+        ? prev.residences.filter(id => id !== residenceId)
+        : [...prev.residences, residenceId]
+    }));
+  };
+
+  const handleEditUser = (user) => {
+    setEditingUser(user.id);
+    setEditUser({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      residences: user.residences || []
+    });
+  };
+
+  const handleUpdateUser = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch(`/api/users/${editUser.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: editUser.name,
+          email: editUser.email,
+          residences: editUser.residences
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setEditingUser(null);
+        setEditUser({ id: null, email: '', name: '', residences: [] });
+        fetchUsers();
+        alert('Usuario actualizado exitosamente');
+      } else {
+        alert('Error: ' + (data.error || 'No se pudo actualizar el usuario'));
+      }
+    } catch (error) {
+      console.error('Error updating user:', error);
+      alert('Error al actualizar usuario');
+    }
+  };
+
+  const toggleEditResidence = (residenceId) => {
+    setEditUser(prev => ({
       ...prev,
       residences: prev.residences.includes(residenceId)
         ? prev.residences.filter(id => id !== residenceId)
@@ -1586,6 +1966,73 @@ const UserManagement = ({ token, userRole }) => {
         </div>
       )}
 
+      {/* Edit User Modal */}
+      {editingUser && (
+        <div className="bg-white rounded-lg border border-slate-200 p-6 mb-6 animate-in">
+          <h3 className="text-lg font-bold text-slate-800 mb-4">Editar Usuario</h3>
+          <form onSubmit={handleUpdateUser} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Nombre Completo</label>
+                <input
+                  type="text"
+                  required
+                  value={editUser.name}
+                  onChange={(e) => setEditUser({...editUser, name: e.target.value})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+                  placeholder="Ej: Juan Pérez"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  required
+                  value={editUser.email}
+                  onChange={(e) => setEditUser({...editUser, email: e.target.value})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+                  placeholder="usuario@example.com"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Residencias Asignadas</label>
+              <div className="grid grid-cols-3 gap-3">
+                {residences.map(residence => (
+                  <label key={residence.id} className="flex items-center space-x-2 p-3 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editUser.residences.includes(residence.id)}
+                      onChange={() => toggleEditResidence(residence.id)}
+                      className="rounded text-slate-900 focus:ring-slate-900"
+                    />
+                    <span className="text-sm text-slate-700">{residence.id} - {residence.name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="flex justify-end space-x-3 pt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingUser(null);
+                  setEditUser({ id: null, email: '', name: '', residences: [] });
+                }}
+                className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors"
+              >
+                Actualizar Usuario
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       {/* Users Table */}
       <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
         <table className="w-full">
@@ -1623,14 +2070,22 @@ const UserManagement = ({ token, userRole }) => {
                   </div>
                 </td>
                 <td className="px-6 py-4 text-right">
-                  {user.role !== 'admin' && (
+                  <div className="flex justify-end space-x-3">
                     <button
-                      onClick={() => handleDeleteUser(user.id)}
-                      className="text-red-600 hover:text-red-800 text-sm font-medium"
+                      onClick={() => handleEditUser(user)}
+                      className="text-slate-600 hover:text-slate-900 text-sm font-medium"
                     >
-                      Eliminar
+                      Editar
                     </button>
-                  )}
+                    {user.role !== 'admin' && (
+                      <button
+                        onClick={() => handleDeleteUser(user.id)}
+                        className="text-red-600 hover:text-red-800 text-sm font-medium"
+                      >
+                        Eliminar
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
