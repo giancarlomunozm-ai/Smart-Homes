@@ -2,14 +2,14 @@
 -- Email: admin@smartspaces.com
 -- Password: admin123
 INSERT OR IGNORE INTO users (id, email, password, name, role) VALUES 
-  (1, 'admin@smartspaces.com', 'b3c0d3f1a7c9e5d8f2a4b6e8c1d3f5a7b9c0e2f4a6b8d0f2e4c6a8b0d2f4e6a8', 'Smart Spaces Admin', 'admin');
+  (1, 'admin@smartspaces.com', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 'Smart Spaces Admin', 'admin');
 
 -- Insertar usuarios clientes de ejemplo
 -- Emails: cliente1@example.com, cliente2@example.com
 -- Password para ambos: cliente123
 INSERT OR IGNORE INTO users (id, email, password, name, role) VALUES 
-  (2, 'cliente1@example.com', 'f7a9c1e3b5d7f9a1c3e5b7d9f1a3c5e7b9d1f3a5c7e9b1d3f5a7c9e1b3d5f7a9', 'Juan Pérez', 'client'),
-  (3, 'cliente2@example.com', 'f7a9c1e3b5d7f9a1c3e5b7d9f1a3c5e7b9d1f3a5c7e9b1d3f5a7c9e1b3d5f7a9', 'María García', 'client');
+  (2, 'cliente1@example.com', '09a31a7001e261ab1e056182a71d3cf57f582ca9a29cff5eb83be0f0549730a9', 'Juan Pérez', 'client'),
+  (3, 'cliente2@example.com', '09a31a7001e261ab1e056182a71d3cf57f582ca9a29cff5eb83be0f0549730a9', 'María García', 'client');
 
 -- Insertar residencias
 INSERT OR IGNORE INTO residences (id, name, address, image, status) VALUES 

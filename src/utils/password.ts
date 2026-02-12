@@ -1,6 +1,4 @@
 // Utilidades de hashing de contraseñas usando Web Crypto API
-// Nota: Para producción real, considera usar bcrypt a través de una API externa
-// o implementar un sistema más robusto
 
 export async function hashPassword(password: string): Promise<string> {
   const encoder = new TextEncoder();
@@ -15,10 +13,10 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   return passwordHash === hash;
 }
 
-// Contraseñas hasheadas para los datos de seed:
-// admin123 -> hash SHA-256
-// cliente123 -> hash SHA-256
+// Contraseñas hasheadas correctas (SHA-256):
+// admin123 -> 240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9
+// cliente123 -> 09a31a7001e261ab1e056182a71d3cf57f582ca9a29cff5eb83be0f0549730a9
 export const DEMO_PASSWORDS = {
-  admin123: 'b3c0d3f1a7c9e5d8f2a4b6e8c1d3f5a7b9c0e2f4a6b8d0f2e4c6a8b0d2f4e6a8',
-  cliente123: 'f7a9c1e3b5d7f9a1c3e5b7d9f1a3c5e7b9d1f3a5c7e9b1d3f5a7c9e1b3d5f7a9'
+  admin123: '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9',
+  cliente123: '09a31a7001e261ab1e056182a71d3cf57f582ca9a29cff5eb83be0f0549730a9'
 };
