@@ -2,11 +2,21 @@
 
 Sistema de gestión inteligente de residencias con control de acceso diferenciado para equipos de soporte y clientes finales.
 
+## 📦 Versión Actual: v1.3 (2026-02-12)
+
+### ✨ Últimas actualizaciones:
+- ✅ **Gestión completa de usuarios** - Editar nombre, email, residencias asignadas
+- ✅ **Conteo correcto de residencias** - Muestra número exacto por usuario
+- ✅ **Agregar dispositivos** - Formulario completo con todos los campos
+- ✅ **Editar dispositivos** - Modal de edición con datos pre-llenados
+- ✅ **Eliminar dispositivos** - Confirmación y registro de eventos
+- ✅ **Permisos por rol** - Solo admin puede gestionar usuarios y dispositivos
+
 ## 🌐 URLs DE PRODUCCIÓN
 
 ### Aplicación Principal
 - **Producción**: https://smart-homes.pages.dev ✅ **ONLINE Y FUNCIONAL**
-- **Deployment actual**: https://b68c2c12.smart-homes.pages.dev
+- **Deployment actual**: https://fe8938d5.smart-homes.pages.dev
 - **GitHub**: https://github.com/giancarlomunozm-ai/Smart-Homes
 
 ### Base de Datos D1
@@ -27,7 +37,7 @@ Sistema de gestión inteligente de residencias con control de acceso diferenciad
 Email: admin@smartspaces.com
 Password: admin123
 ```
-**Permisos**: Ver todas las residencias, gestionar dispositivos, crear usuarios, asignar casas, responder tickets.
+**Permisos**: Ver todas las residencias, crear/editar/eliminar usuarios, agregar/editar/eliminar dispositivos, gestionar tickets.
 
 ### 👤 Cliente 1 - Juan Pérez
 ```
