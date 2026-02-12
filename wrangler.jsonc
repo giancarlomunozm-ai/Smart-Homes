@@ -6,5 +6,12 @@
   "compatibility_flags": ["nodejs_compat"],
   "vars": {
     "JWT_SECRET": "your-secret-key-change-in-production"
-  }
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "smart-homes-production",
+      "database_id": "c2818feb-c3b8-4ee0-b474-dc45afb55905"
+    }
+  ]
 }
