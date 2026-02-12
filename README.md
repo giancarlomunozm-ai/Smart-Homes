@@ -6,7 +6,7 @@ Sistema de gestión inteligente de residencias con control de acceso diferenciad
 
 ### Aplicación Principal
 - **Producción**: https://smart-homes.pages.dev ✅ **ONLINE Y FUNCIONAL**
-- **Deployment actual**: https://ee146a75.smart-homes.pages.dev
+- **Deployment actual**: https://dee5bd1c.smart-homes.pages.dev
 - **GitHub**: https://github.com/giancarlomunozm-ai/Smart-Homes
 
 ### Base de Datos D1
