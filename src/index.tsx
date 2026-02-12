@@ -7,6 +7,8 @@ import residences from './routes/residences';
 import devices from './routes/devices';
 import systems from './routes/systems';
 import events from './routes/events';
+import support from './routes/support';
+import users from './routes/users';
 
 type Bindings = {
   DB: D1Database;
@@ -28,6 +30,8 @@ app.route('/api/residences', residences);
 app.route('/api/devices', devices);
 app.route('/api/systems', systems);
 app.route('/api/events', events);
+app.route('/api/support', support);
+app.route('/api/users', users);
 
 // Health check
 app.get('/api/health', (c) => {

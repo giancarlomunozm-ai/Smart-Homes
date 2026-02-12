@@ -62,3 +62,23 @@ INSERT OR IGNORE INTO events (residence_id, device_id, user_id, event_type, desc
   ('H-002', 5, 1, 'device_added', 'Switch Principal agregado al sistema'),
   ('H-003', 8, 1, 'device_added', 'Router Mesh agregado al sistema'),
   ('H-003', 9, 1, 'device_added', 'Receiver AV agregado al sistema');
+
+-- Actualizar estados de suscripción
+UPDATE residences SET subscription_status = 'active', subscription_expires_at = datetime('now', '+1 year') WHERE id = 'H-001';
+UPDATE residences SET subscription_status = 'active', subscription_expires_at = datetime('now', '+6 months') WHERE id = 'H-002';
+UPDATE residences SET subscription_status = 'inactive', subscription_expires_at = datetime('now', '-1 month') WHERE id = 'H-003';
+
+-- Insertar tickets de soporte de ejemplo
+INSERT OR IGNORE INTO support_tickets (id, residence_id, user_id, title, description, priority, status, category, assigned_to) VALUES 
+  (1, 'H-001', 2, 'Router perdiendo conexión intermitente', 'El router principal presenta desconexiones cada 2-3 horas. Afecta toda la red de la residencia.', 'high', 'open', 'Network', 1),
+  (2, 'H-001', 2, 'Cámara de entrada con imagen borrosa', 'La cámara principal muestra imagen desenfocada desde hace 2 días.', 'medium', 'in_progress', 'Security', 1),
+  (3, 'H-002', 3, 'Actualización de firmware requerida', 'Solicito actualización del sistema de cortinas Lutron a última versión.', 'low', 'resolved', 'Automation', 1),
+  (4, 'H-001', 2, 'Configurar acceso remoto VPN', 'Necesito acceso remoto para monitorear cámaras cuando estoy de viaje.', 'medium', 'open', 'Network', NULL);
+
+-- Insertar respuestas a tickets
+INSERT OR IGNORE INTO ticket_responses (ticket_id, user_id, message, is_internal) VALUES 
+  (1, 1, 'Hemos identificado el problema. El router necesita actualización de firmware. Programaremos visita técnica.', 0),
+  (2, 1, 'Técnico en camino. Revisaremos limpieza de lente y configuración de enfoque.', 0),
+  (2, 2, 'Perfecto, estaré disponible mañana por la tarde.', 0),
+  (3, 1, 'Actualización completada exitosamente. Sistema funcionando correctamente.', 0),
+  (3, 3, 'Excelente servicio, gracias!', 0);

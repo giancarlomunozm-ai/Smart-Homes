@@ -58,6 +58,112 @@ const api = {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     return res.json();
+  },
+
+  // Soporte
+  getTicketsByResidence: async (token, residenceId) => {
+    const res = await fetch(`${API_BASE}/support/residence/${residenceId}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return res.json();
+  },
+
+  getTicketDetails: async (token, ticketId) => {
+    const res = await fetch(`${API_BASE}/support/${ticketId}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return res.json();
+  },
+
+  createTicket: async (token, data) => {
+    const res = await fetch(`${API_BASE}/support`, {
+      method: 'POST',
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json' 
+      },
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  },
+
+  addTicketResponse: async (token, ticketId, message) => {
+    const res = await fetch(`${API_BASE}/support/${ticketId}/responses`, {
+      method: 'POST',
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json' 
+      },
+      body: JSON.stringify({ message })
+    });
+    return res.json();
+  },
+
+  updateTicketStatus: async (token, ticketId, status) => {
+    const res = await fetch(`${API_BASE}/support/${ticketId}/status`, {
+      method: 'PUT',
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json' 
+      },
+      body: JSON.stringify({ status })
+    });
+    return res.json();
+  },
+
+  // Usuarios
+  getUsers: async (token) => {
+    const res = await fetch(`${API_BASE}/users`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return res.json();
+  },
+
+  getAvailableResidences: async (token) => {
+    const res = await fetch(`${API_BASE}/users/available-residences`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return res.json();
+  },
+
+  createUser: async (token, data) => {
+    const res = await fetch(`${API_BASE}/users`, {
+      method: 'POST',
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json' 
+      },
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  },
+
+  addUserResidence: async (token, userId, residenceId) => {
+    const res = await fetch(`${API_BASE}/users/${userId}/residences`, {
+      method: 'POST',
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json' 
+      },
+      body: JSON.stringify({ residence_id: residenceId })
+    });
+    return res.json();
+  },
+
+  removeUserResidence: async (token, userId, residenceId) => {
+    const res = await fetch(`${API_BASE}/users/${userId}/residences/${residenceId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return res.json();
+  },
+
+  deleteUser: async (token, userId) => {
+    const res = await fetch(`${API_BASE}/users/${userId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return res.json();
   }
 };
 
