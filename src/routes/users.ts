@@ -340,4 +340,56 @@ users.delete('/:userId/residences/:residenceId', async (c) => {
   }
 });
 
+// Actualizar usuario (admin only)
+users.put('/:userId', requireAdmin, async (c) => {
+  try {
+    const userId = c.req.param('userId');
+    const { name, email, residences } = await c.req.json();
+    const db = c.env.DB;
+
+    // Validar campos requeridos
+    if (!name || !email) {
+      return c.json({ error: 'Nombre y email son requeridos' }, 400);
+    }
+
+    // Verificar que el usuario existe
+    const user = await db.prepare(
+      'SELECT id, role FROM users WHERE id = ?'
+    ).bind(userId).first();
+
+    if (!user) {
+      return c.json({ error: 'Usuario no encontrado' }, 404);
+    }
+
+    // Actualizar datos del usuario
+    await db.prepare(
+      'UPDATE users SET name = ?, email = ? WHERE id = ?'
+    ).bind(name, email, userId).run();
+
+    // Si se proporcionaron residencias, actualizar asignaciones
+    if (residences && Array.isArray(residences)) {
+      // Eliminar asignaciones anteriores
+      await db.prepare(
+        'DELETE FROM user_residences WHERE user_id = ?'
+      ).bind(userId).run();
+
+      // Agregar nuevas asignaciones
+      for (const residenceId of residences) {
+        await db.prepare(
+          'INSERT INTO user_residences (user_id, residence_id) VALUES (?, ?)'
+        ).bind(userId, residenceId).run();
+      }
+    }
+
+    return c.json({
+      success: true,
+      message: 'Usuario actualizado exitosamente'
+    });
+
+  } catch (error) {
+    console.error('Update user error:', error);
+    return c.json({ error: 'Error al actualizar usuario' }, 500);
+  }
+});
+
 export default users;

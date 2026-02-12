@@ -646,28 +646,28 @@ const SystemsGrid = ({ systems, devices, onSelectSystem }) => {
   };
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-12 gap-y-24 animate-in fade-in duration-1000">
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-x-8 gap-y-16 animate-in fade-in duration-1000">
       {systems.map(sys => {
         const count = getDeviceCount(sys.id);
         return (
           <button 
             key={sys.id}
             onClick={() => onSelectSystem(sys.id)}
-            className="group text-left space-y-10"
+            className="group text-left space-y-6"
           >
             <div className="aspect-square bg-white flex items-center justify-center relative transition-all duration-700 ease-out">
               <div className="absolute inset-0 border border-slate-100" />
               <div className="absolute inset-0 border-[1.5px] border-transparent group-hover:border-slate-950 transition-all duration-500 m-[-1px]" />
-              <div className="text-slate-200 group-hover:text-slate-950 transition-all duration-500 transform group-hover:scale-75">
-                <Icon name={sys.icon} size={32} />
+              <div className="text-slate-200 group-hover:text-slate-950 transition-all duration-500 transform group-hover:scale-90">
+                <Icon name={sys.icon} size={64} />
               </div>
-              <div className="absolute bottom-8 opacity-0 group-hover:opacity-100 group-hover:-translate-y-2 transition-all duration-500">
-                <span className="text-[9px] font-black uppercase tracking-[0.5em] text-slate-950">{count} Units</span>
+              <div className="absolute bottom-4 opacity-0 group-hover:opacity-100 group-hover:-translate-y-1 transition-all duration-500">
+                <span className="text-[8px] font-black uppercase tracking-[0.4em] text-slate-950">{count} Units</span>
               </div>
             </div>
-            <div className="space-y-3 px-1">
-              <h3 className="text-[12px] font-black text-slate-950 uppercase tracking-[0.5em] group-hover:tracking-[0.6em] transition-all">{sys.name}</h3>
-              <div className="h-[2px] w-8 bg-slate-900/10 group-hover:w-full group-hover:bg-slate-950 transition-all duration-700" />
+            <div className="space-y-2 px-1">
+              <h3 className="text-[10px] font-black text-slate-950 uppercase tracking-[0.4em] group-hover:tracking-[0.5em] transition-all">{sys.name}</h3>
+              <div className="h-[2px] w-6 bg-slate-900/10 group-hover:w-full group-hover:bg-slate-950 transition-all duration-700" />
             </div>
           </button>
         );
@@ -1137,7 +1137,7 @@ const SupportTab = ({ residenceId, token, userRole }) => {
 
   const fetchTickets = async () => {
     try {
-      const response = await fetch(`/api/support/tickets?residence_id=${residenceId}`, {
+      const response = await fetch(`/api/support/residence/${residenceId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
@@ -1154,7 +1154,7 @@ const SupportTab = ({ residenceId, token, userRole }) => {
   const handleCreateTicket = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('/api/support/tickets', {
+      const response = await fetch('/api/support', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -1170,9 +1170,13 @@ const SupportTab = ({ residenceId, token, userRole }) => {
         setNewTicket({ title: '', description: '', priority: 'medium', category: 'General' });
         setShowNewTicket(false);
         fetchTickets();
+        alert('Ticket creado exitosamente!');
+      } else {
+        alert('Error: ' + (data.error || 'No se pudo crear el ticket'));
       }
     } catch (error) {
       console.error('Error creating ticket:', error);
+      alert('Error al crear ticket: ' + error.message);
     }
   };
 

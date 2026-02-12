@@ -299,4 +299,84 @@ devices.get('/system/:systemId', async (c) => {
   }
 });
 
+// Crear nuevo dispositivo
+devices.post('/', async (c) => {
+  try {
+    const user = c.get('user');
+    const db = c.env.DB;
+    const {
+      residence_id,
+      system_id,
+      name,
+      brand,
+      model,
+      serial,
+      ip,
+      mac,
+      firmware,
+      username,
+      password,
+      status
+    } = await c.req.json();
+
+    // Validar campos requeridos
+    if (!residence_id || !system_id || !name) {
+      return c.json({ error: 'Campos requeridos: residence_id, system_id, name' }, 400);
+    }
+
+    // Verificar acceso a la residencia
+    if (user.role === 'client') {
+      const access = await db.prepare(
+        'SELECT id FROM user_residences WHERE user_id = ? AND residence_id = ?'
+      ).bind(user.userId, residence_id).first();
+
+      if (!access) {
+        return c.json({ error: 'Acceso denegado a esta residencia' }, 403);
+      }
+    }
+
+    // Insertar dispositivo
+    const result = await db.prepare(`
+      INSERT INTO devices (
+        residence_id, system_id, name, brand, model, serial, 
+        ip, mac, firmware, username, password, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      residence_id,
+      system_id,
+      name,
+      brand || '',
+      model || '',
+      serial || '',
+      ip || '',
+      mac || '',
+      firmware || '',
+      username || '',
+      password || '',
+      status || 'Online'
+    ).run();
+
+    // Registrar evento
+    await db.prepare(
+      'INSERT INTO events (residence_id, device_id, user_id, event_type, description) VALUES (?, ?, ?, ?, ?)'
+    ).bind(
+      residence_id,
+      result.meta.last_row_id,
+      user.userId,
+      'device_added',
+      `Dispositivo ${name} agregado al sistema`
+    ).run();
+
+    return c.json({
+      success: true,
+      message: 'Dispositivo creado exitosamente',
+      deviceId: result.meta.last_row_id
+    });
+
+  } catch (error) {
+    console.error('Create device error:', error);
+    return c.json({ error: 'Error al crear dispositivo' }, 500);
+  }
+});
+
 export default devices;
