@@ -208,7 +208,7 @@ users.put('/:userId', async (c) => {
   try {
     const currentUser = c.get('user');
     const userId = parseInt(c.req.param('userId'));
-    const { name, email } = await c.req.json();
+    const { name, email, residences } = await c.req.json();
     const db = c.env.DB;
 
     // Verificar permisos
@@ -216,9 +216,25 @@ users.put('/:userId', async (c) => {
       return c.json({ error: 'No tienes permiso para editar este usuario' }, 403);
     }
 
+    // Actualizar nombre y email
     await db.prepare(
       'UPDATE users SET name = ?, email = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
     ).bind(name, email, userId).run();
+
+    // Si se incluyen residencias y el usuario es admin, actualizar residencias
+    if (residences && currentUser.role === 'admin') {
+      // Primero, eliminar todas las residencias actuales del usuario
+      await db.prepare(
+        'DELETE FROM user_residences WHERE user_id = ?'
+      ).bind(userId).run();
+
+      // Luego, agregar las nuevas residencias
+      for (const residenceId of residences) {
+        await db.prepare(
+          'INSERT INTO user_residences (user_id, residence_id) VALUES (?, ?)'
+        ).bind(userId, residenceId).run();
+      }
+    }
 
     return c.json({
       success: true,
