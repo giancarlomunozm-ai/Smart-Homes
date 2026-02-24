@@ -445,7 +445,7 @@ const ResidenceDirectory = ({ residences, onSelectResidence }) => {
           <div className="h-[2px] w-12 bg-slate-950" />
           <p className="text-[11px] uppercase tracking-[0.6em] text-slate-950 font-black">Portfolio Management</p>
         </div>
-        <h1 className="text-7xl font-extralight text-slate-950 tracking-tighter">Residences</h1>
+        <h1 className="text-7xl font-extralight text-slate-950 tracking-tighter">Spaces</h1>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-16">
