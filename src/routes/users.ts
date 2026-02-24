@@ -2,10 +2,13 @@ import { Hono } from 'hono';
 import { authMiddleware, requireAdmin } from '../middleware/auth';
 import { hashPassword } from '../utils/password';
 import type { JWTPayload } from '../utils/jwt';
+import { EmailService } from '../services/email';
 
 type Bindings = {
   DB: D1Database;
   JWT_SECRET: string;
+  RESEND_API_KEY?: string;
+  RESEND_FROM_EMAIL?: string;
 };
 
 type Variables = {
@@ -408,6 +411,237 @@ users.put('/:userId', requireAdmin, async (c) => {
   } catch (error) {
     console.error('Update user error:', error);
     return c.json({ error: 'Error al actualizar usuario' }, 500);
+  }
+});
+
+// Invitar usuario por email (admin only)
+users.post('/invite', requireAdmin, async (c) => {
+  try {
+    const user = c.get('user');
+    const { email, role, residences } = await c.req.json();
+    const db = c.env.DB;
+
+    // Validar campos
+    if (!email || !role) {
+      return c.json({ error: 'Email y rol son requeridos' }, 400);
+    }
+
+    // Verificar que el email no esté ya registrado
+    const existingUser = await db.prepare(
+      'SELECT id FROM users WHERE email = ?'
+    ).bind(email).first();
+
+    if (existingUser) {
+      return c.json({ error: 'Este email ya está registrado' }, 400);
+    }
+
+    // Generar token único
+    const token = crypto.randomUUID();
+    
+    // Calcular fecha de expiración (7 días)
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
+    // Guardar invitación en BD
+    await db.prepare(`
+      INSERT INTO user_invitations (email, token, invited_by, role, residences, expires_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).bind(
+      email,
+      token,
+      user.userId,
+      role,
+      residences ? JSON.stringify(residences) : null,
+      expiresAt.toISOString()
+    ).run();
+
+    // Si hay API key de Resend, enviar email
+    if (c.env.RESEND_API_KEY) {
+      try {
+        const emailService = new EmailService(
+          c.env.RESEND_API_KEY,
+          c.env.RESEND_FROM_EMAIL
+        );
+
+        // Obtener nombres de residencias
+        let residenceNames: string[] = [];
+        if (residences && residences.length > 0) {
+          const placeholders = residences.map(() => '?').join(',');
+          const result = await db.prepare(
+            `SELECT name FROM residences WHERE id IN (${placeholders})`
+          ).bind(...residences).all();
+          residenceNames = result.results.map((r: any) => r.name);
+        }
+
+        // Obtener nombre del invitador
+        const inviter = await db.prepare(
+          'SELECT name FROM users WHERE id = ?'
+        ).bind(user.userId).first<{ name: string }>();
+
+        const emailResult = await emailService.sendInvitationEmail({
+          to: email,
+          inviterName: inviter?.name || 'Smart Spaces Admin',
+          invitationToken: token,
+          residenceNames,
+          role
+        });
+
+        if (!emailResult.success) {
+          console.error('Email sending failed:', emailResult.error);
+          // No fallar la invitación si el email falla
+        }
+      } catch (emailError) {
+        console.error('Error sending email:', emailError);
+        // Continuar aunque falle el email
+      }
+    }
+
+    return c.json({
+      success: true,
+      message: 'Invitación enviada exitosamente',
+      token, // Solo para testing, en prod no debería devolverse
+      invitationUrl: `https://smart-homes.pages.dev/invite/${token}`
+    });
+
+  } catch (error) {
+    console.error('Invite user error:', error);
+    return c.json({ error: 'Error al enviar invitación' }, 500);
+  }
+});
+
+// Verificar token de invitación (público)
+users.get('/invite/:token', async (c) => {
+  try {
+    const token = c.req.param('token');
+    const db = c.env.DB;
+
+    const invitation = await db.prepare(`
+      SELECT 
+        ui.*,
+        u.name as inviter_name
+      FROM user_invitations ui
+      LEFT JOIN users u ON ui.invited_by = u.id
+      WHERE ui.token = ? AND ui.status = 'pending'
+    `).bind(token).first();
+
+    if (!invitation) {
+      return c.json({ error: 'Invitación no encontrada o ya utilizada' }, 404);
+    }
+
+    // Verificar si expiró
+    const now = new Date();
+    const expiresAt = new Date(invitation.expires_at as string);
+    if (now > expiresAt) {
+      // Marcar como expirada
+      await db.prepare(
+        'UPDATE user_invitations SET status = ? WHERE token = ?'
+      ).bind('expired', token).run();
+
+      return c.json({ error: 'Esta invitación ha expirado' }, 410);
+    }
+
+    // Obtener nombres de residencias
+    let residenceNames: string[] = [];
+    if (invitation.residences) {
+      const residenceIds = JSON.parse(invitation.residences as string);
+      if (residenceIds.length > 0) {
+        const placeholders = residenceIds.map(() => '?').join(',');
+        const result = await db.prepare(
+          `SELECT name FROM residences WHERE id IN (${placeholders})`
+        ).bind(...residenceIds).all();
+        residenceNames = result.results.map((r: any) => r.name);
+      }
+    }
+
+    return c.json({
+      success: true,
+      invitation: {
+        email: invitation.email,
+        role: invitation.role,
+        residenceNames,
+        inviterName: invitation.inviter_name,
+        expiresAt: invitation.expires_at
+      }
+    });
+
+  } catch (error) {
+    console.error('Verify invitation error:', error);
+    return c.json({ error: 'Error al verificar invitación' }, 500);
+  }
+});
+
+// Aceptar invitación y crear cuenta (público)
+users.post('/invite/:token/accept', async (c) => {
+  try {
+    const token = c.req.param('token');
+    const { password, name } = await c.req.json();
+    const db = c.env.DB;
+
+    if (!password || password.length < 6) {
+      return c.json({ error: 'La contraseña debe tener al menos 6 caracteres' }, 400);
+    }
+
+    // Obtener invitación
+    const invitation = await db.prepare(
+      'SELECT * FROM user_invitations WHERE token = ? AND status = ?'
+    ).bind(token, 'pending').first();
+
+    if (!invitation) {
+      return c.json({ error: 'Invitación no válida' }, 404);
+    }
+
+    // Verificar expiración
+    const now = new Date();
+    const expiresAt = new Date(invitation.expires_at as string);
+    if (now > expiresAt) {
+      await db.prepare(
+        'UPDATE user_invitations SET status = ? WHERE token = ?'
+      ).bind('expired', token).run();
+
+      return c.json({ error: 'Esta invitación ha expirado' }, 410);
+    }
+
+    // Crear usuario
+    const hashedPassword = await hashPassword(password);
+    const userName = name || invitation.email.split('@')[0];
+
+    const userResult = await db.prepare(`
+      INSERT INTO users (email, password, name, role)
+      VALUES (?, ?, ?, ?)
+    `).bind(
+      invitation.email,
+      hashedPassword,
+      userName,
+      invitation.role
+    ).run();
+
+    const userId = userResult.meta.last_row_id;
+
+    // Asignar residencias si las hay
+    if (invitation.residences) {
+      const residenceIds = JSON.parse(invitation.residences as string);
+      for (const residenceId of residenceIds) {
+        await db.prepare(
+          'INSERT INTO user_residences (user_id, residence_id) VALUES (?, ?)'
+        ).bind(userId, residenceId).run();
+      }
+    }
+
+    // Marcar invitación como aceptada
+    await db.prepare(`
+      UPDATE user_invitations 
+      SET status = ?, accepted_at = CURRENT_TIMESTAMP 
+      WHERE token = ?
+    `).bind('accepted', token).run();
+
+    return c.json({
+      success: true,
+      message: 'Cuenta creada exitosamente'
+    });
+
+  } catch (error) {
+    console.error('Accept invitation error:', error);
+    return c.json({ error: 'Error al aceptar invitación' }, 500);
   }
 });
 

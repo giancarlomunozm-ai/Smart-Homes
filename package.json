@@ -14,7 +14,8 @@
     "db:reset": "rm -rf .wrangler/state/v3/d1 && npm run db:migrate:local && npm run db:seed"
   },
   "dependencies": {
-    "hono": "^4.11.9"
+    "hono": "^4.11.9",
+    "resend": "^6.9.2"
   },
   "devDependencies": {
     "@hono/vite-build": "^1.2.0",
