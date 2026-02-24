@@ -531,7 +531,7 @@ const ResidenceHeader = ({ residence, activeTab, onTabChange, onBack }) => {
         </div>
 
         <nav className="flex gap-16 border-b border-slate-200/60 w-full">
-          {['systems', 'history', 'support'].map(tab => (
+          {['systems', 'documents', 'history', 'support'].map(tab => (
             <button
               key={tab}
               onClick={() => onTabChange(tab)}
@@ -1515,6 +1515,338 @@ const DeviceDetails = ({ device, onClose }) => {
   );
 };
 
+// ==================== DOCUMENTS TAB COMPONENT ====================
+const DocumentsTab = ({ residenceId, token, userRole }) => {
+  const [files, setFiles] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [showUpload, setShowUpload] = React.useState(false);
+  const [uploading, setUploading] = React.useState(false);
+  const [newFile, setNewFile] = React.useState({
+    file_category: 'topology',
+    description: ''
+  });
+  const [selectedFile, setSelectedFile] = React.useState(null);
+
+  React.useEffect(() => {
+    fetchFiles();
+  }, [residenceId, token]);
+
+  const fetchFiles = async () => {
+    try {
+      const response = await fetch(`/api/files/residence/${residenceId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setFiles(data.files || []);
+      }
+    } catch (error) {
+      console.error('Error fetching files:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validar tamaño (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('El archivo excede el límite de 5MB');
+      return;
+    }
+
+    setSelectedFile(file);
+  };
+
+  const handleUpload = async (e) => {
+    e.preventDefault();
+    if (!selectedFile) {
+      alert('Por favor selecciona un archivo');
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      // Convertir archivo a base64
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = reader.result.split(',')[1];
+
+        const response = await fetch('/api/files/upload', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            residence_id: residenceId,
+            file_name: selectedFile.name,
+            file_data: base64,
+            file_category: newFile.file_category,
+            description: newFile.description,
+            mime_type: selectedFile.type
+          })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          setNewFile({ file_category: 'topology', description: '' });
+          setSelectedFile(null);
+          setShowUpload(false);
+          fetchFiles();
+          alert('Archivo subido exitosamente');
+        } else {
+          alert('Error: ' + (data.error || 'No se pudo subir el archivo'));
+        }
+        setUploading(false);
+      };
+
+      reader.onerror = () => {
+        alert('Error al leer el archivo');
+        setUploading(false);
+      };
+
+      reader.readAsDataURL(selectedFile);
+
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      alert('Error al subir archivo');
+      setUploading(false);
+    }
+  };
+
+  const handleDelete = async (fileId, fileName) => {
+    if (!confirm(`¿Estás seguro de eliminar "${fileName}"?`)) return;
+
+    try {
+      const response = await fetch(`/api/files/${fileId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (data.success) {
+        fetchFiles();
+        alert('Archivo eliminado');
+      }
+    } catch (error) {
+      console.error('Error deleting file:', error);
+    }
+  };
+
+  const getCategoryLabel = (category) => {
+    const labels = {
+      topology: 'Topología',
+      contract: 'Contrato',
+      delivery: 'Acta de Entrega',
+      manual: 'Manual',
+      invoice: 'Factura',
+      other: 'Otro'
+    };
+    return labels[category] || category;
+  };
+
+  const getCategoryIcon = (category) => {
+    const icons = {
+      topology: '🗺️',
+      contract: '📄',
+      delivery: '📦',
+      manual: '📚',
+      invoice: '🧾',
+      other: '📎'
+    };
+    return icons[category] || '📎';
+  };
+
+  const getFileIcon = (fileType) => {
+    const icons = {
+      pdf: '📕',
+      image: '🖼️',
+      document: '📝',
+      other: '📄'
+    };
+    return icons[fileType] || '📄';
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-slate-400">Cargando documentos...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h3 className="text-xl font-bold text-slate-800">Documentos</h3>
+          <p className="text-sm text-slate-500 mt-1">Topologías, contratos, actas de entrega y más</p>
+        </div>
+        {userRole === 'admin' && (
+          <button
+            onClick={() => setShowUpload(!showUpload)}
+            className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors flex items-center space-x-2"
+          >
+            <span>{showUpload ? '✖' : '➕'}</span>
+            <span>{showUpload ? 'Cancelar' : 'Subir Archivo'}</span>
+          </button>
+        )}
+      </div>
+
+      {/* Upload Form */}
+      {showUpload && (
+        <div className="bg-white rounded-lg border border-slate-200 p-6 mb-4 animate-in">
+          <h4 className="text-lg font-bold text-slate-800 mb-4">Subir Nuevo Archivo</h4>
+          <form onSubmit={handleUpload} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Archivo (Max 5MB)</label>
+              <input
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx,.xls,.xlsx"
+                onChange={handleFileSelect}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent text-sm"
+                required
+              />
+              {selectedFile && (
+                <p className="text-xs text-slate-500 mt-2">
+                  📎 {selectedFile.name} ({formatFileSize(selectedFile.size)})
+                </p>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Categoría</label>
+                <select
+                  value={newFile.file_category}
+                  onChange={(e) => setNewFile({...newFile, file_category: e.target.value})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent text-sm"
+                >
+                  <option value="topology">Topología</option>
+                  <option value="contract">Contrato</option>
+                  <option value="delivery">Acta de Entrega</option>
+                  <option value="manual">Manual</option>
+                  <option value="invoice">Factura</option>
+                  <option value="other">Otro</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Descripción (opcional)</label>
+                <input
+                  type="text"
+                  value={newFile.description}
+                  onChange={(e) => setNewFile({...newFile, description: e.target.value})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent text-sm"
+                  placeholder="Ej: Topología de red actualizada 2026"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end space-x-3 pt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowUpload(false);
+                  setSelectedFile(null);
+                  setNewFile({ file_category: 'topology', description: '' });
+                }}
+                className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={uploading}
+                className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors text-sm disabled:opacity-50"
+              >
+                {uploading ? 'Subiendo...' : 'Subir Archivo'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Files Grid */}
+      {files.length === 0 ? (
+        <div className="text-center py-12">
+          <div className="text-6xl mb-4">📂</div>
+          <div className="text-slate-400">No hay documentos subidos</div>
+          {userRole === 'admin' && (
+            <button
+              onClick={() => setShowUpload(true)}
+              className="mt-4 text-sm text-slate-600 hover:text-slate-900"
+            >
+              Subir primer documento →
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {files.map((file) => (
+            <div key={file.id} className="bg-white rounded-lg border border-slate-200 p-4 hover:shadow-md transition-shadow">
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center space-x-2">
+                  <span className="text-2xl">{getFileIcon(file.file_type)}</span>
+                  <span className="text-lg">{getCategoryIcon(file.file_category)}</span>
+                </div>
+                {userRole === 'admin' && (
+                  <button
+                    onClick={() => handleDelete(file.id, file.file_name)}
+                    className="text-red-600 hover:text-red-800 text-xs"
+                    title="Eliminar"
+                  >
+                    🗑️
+                  </button>
+                )}
+              </div>
+              
+              <h4 className="text-sm font-semibold text-slate-800 mb-1 truncate" title={file.file_name}>
+                {file.file_name}
+              </h4>
+              
+              <div className="flex flex-wrap items-center gap-2 mb-3">
+                <span className="px-2 py-1 text-xs bg-slate-100 text-slate-700 rounded">
+                  {getCategoryLabel(file.file_category)}
+                </span>
+                <span className="text-xs text-slate-500">
+                  {formatFileSize(file.file_size)}
+                </span>
+              </div>
+
+              {file.description && (
+                <p className="text-xs text-slate-600 mb-3 line-clamp-2">{file.description}</p>
+              )}
+
+              <div className="flex items-center justify-between text-xs text-slate-500 mb-3">
+                <span>Por: {file.uploaded_by_name || 'Admin'}</span>
+                <span>{new Date(file.created_at).toLocaleDateString('es-ES')}</span>
+              </div>
+
+              <a
+                href={file.file_url}
+                download={file.file_name}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full px-3 py-2 bg-slate-900 text-white text-center text-sm rounded hover:bg-slate-800 transition-colors"
+              >
+                Ver / Descargar
+              </a>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Aplicación Principal
 const App = () => {
   const { user, token, loading, logout } = useAuth();
@@ -1674,6 +2006,10 @@ const App = () => {
 
       if (activeTab === 'history') {
         return <HistoryTab residenceId={currentResidence.id} token={token} />;
+      }
+
+      if (activeTab === 'documents') {
+        return <DocumentsTab residenceId={currentResidence.id} token={token} userRole={user?.role} />;
       }
 
       if (activeTab === 'support') {

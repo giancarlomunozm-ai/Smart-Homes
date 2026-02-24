@@ -9,6 +9,7 @@ import systems from './routes/systems';
 import events from './routes/events';
 import support from './routes/support';
 import users from './routes/users';
+import files from './routes/files';
 
 type Bindings = {
   DB: D1Database;
@@ -32,6 +33,7 @@ app.route('/api/systems', systems);
 app.route('/api/events', events);
 app.route('/api/support', support);
 app.route('/api/users', users);
+app.route('/api/files', files);
 
 // Health check
 app.get('/api/health', (c) => {
