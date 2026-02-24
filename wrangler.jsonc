@@ -5,8 +5,7 @@
   "pages_build_output_dir": "./dist",
   "compatibility_flags": ["nodejs_compat"],
   "vars": {
-    "JWT_SECRET": "your-secret-key-change-in-production",
-    "RESEND_API_KEY": "placeholder-will-use-secret-in-production"
+    "JWT_SECRET": "your-secret-key-change-in-production"
   },
   "d1_databases": [
     {
