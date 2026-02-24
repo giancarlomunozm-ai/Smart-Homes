@@ -2522,10 +2522,11 @@ const UserManagement = ({ token, userRole }) => {
   const [newUser, setNewUser] = React.useState({
     email: '',
     name: '',
-    password: '',
     role: 'client',
     residences: []
   });
+  const [invitationSent, setInvitationSent] = React.useState(false);
+  const [invitationUrl, setInvitationUrl] = React.useState('');
   const [editingUser, setEditingUser] = React.useState(null);
   const [editUser, setEditUser] = React.useState({
     id: null,
@@ -2575,32 +2576,41 @@ const UserManagement = ({ token, userRole }) => {
   const handleInviteUser = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('/api/users', {
+      const response = await fetch('/api/users/invite', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(newUser)
+        body: JSON.stringify({
+          email: newUser.email,
+          name: newUser.name,
+          role: newUser.role,
+          residences: newUser.residences
+        })
       });
       const data = await response.json();
       if (data.success) {
-        setNewUser({
-          email: '',
-          name: '',
-          password: '',
-          role: 'client',
-          residences: []
-        });
-        setShowInviteForm(false);
-        fetchUsers();
-        alert('Usuario creado exitosamente');
+        setInvitationUrl(data.invitation_url);
+        setInvitationSent(true);
+        setTimeout(() => {
+          setNewUser({
+            email: '',
+            name: '',
+            role: 'client',
+            residences: []
+          });
+          setShowInviteForm(false);
+          setInvitationSent(false);
+          setInvitationUrl('');
+          fetchUsers();
+        }, 5000);
       } else {
-        alert('Error: ' + (data.error || 'No se pudo crear el usuario'));
+        alert('Error: ' + (data.error || 'No se pudo enviar la invitación'));
       }
     } catch (error) {
       console.error('Error inviting user:', error);
-      alert('Error al crear usuario');
+      alert('Error al enviar invitación');
     }
   };
 
@@ -2718,88 +2728,124 @@ const UserManagement = ({ token, userRole }) => {
       {/* Invite Form */}
       {showInviteForm && (
         <div className="bg-white rounded-lg border border-slate-200 p-6 mb-6 animate-in">
-          <h3 className="text-lg font-bold text-slate-800 mb-4">Crear Nuevo Usuario</h3>
-          <form onSubmit={handleInviteUser} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Nombre Completo</label>
-                <input
-                  type="text"
-                  required
-                  value={newUser.name}
-                  onChange={(e) => setNewUser({...newUser, name: e.target.value})}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent"
-                  placeholder="Ej: Juan Pérez"
-                />
+          {invitationSent ? (
+            <div className="space-y-4">
+              <div className="flex items-center space-x-3 text-green-600">
+                <span className="text-3xl">✅</span>
+                <div>
+                  <h3 className="text-lg font-bold">Invitación Enviada</h3>
+                  <p className="text-sm text-slate-600">Se ha enviado un email a {newUser.email}</p>
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-                <input
-                  type="email"
-                  required
-                  value={newUser.email}
-                  onChange={(e) => setNewUser({...newUser, email: e.target.value})}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent"
-                  placeholder="usuario@example.com"
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Contraseña</label>
-                <input
-                  type="password"
-                  required
-                  value={newUser.password}
-                  onChange={(e) => setNewUser({...newUser, password: e.target.value})}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent"
-                  placeholder="Mínimo 6 caracteres"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Rol</label>
-                <select
-                  value={newUser.role}
-                  onChange={(e) => setNewUser({...newUser, role: e.target.value})}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent"
-                >
-                  <option value="client">Cliente</option>
-                  <option value="admin">Administrador</option>
-                </select>
+              <div className="bg-slate-50 p-4 rounded-lg">
+                <p className="text-sm font-medium text-slate-700 mb-2">Link de invitación (válido 7 días):</p>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={invitationUrl}
+                    className="flex-1 px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm font-mono"
+                  />
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(invitationUrl);
+                      alert('Link copiado al portapapeles');
+                    }}
+                    className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors text-sm"
+                  >
+                    📋 Copiar
+                  </button>
+                </div>
+                <p className="text-xs text-slate-500 mt-2">El usuario recibirá este link por email para crear su cuenta</p>
               </div>
             </div>
+          ) : (
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Residencias Asignadas</label>
-              <div className="grid grid-cols-3 gap-3">
-                {residences.map(residence => (
-                  <label key={residence.id} className="flex items-center space-x-2 p-3 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer">
+              <h3 className="text-lg font-bold text-slate-800 mb-4">📧 Invitar Nuevo Usuario</h3>
+              <form onSubmit={handleInviteUser} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Nombre Completo</label>
                     <input
-                      type="checkbox"
-                      checked={newUser.residences.includes(residence.id)}
-                      onChange={() => toggleResidence(residence.id)}
-                      className="rounded text-slate-900 focus:ring-slate-900"
+                      type="text"
+                      required
+                      value={newUser.name}
+                      onChange={(e) => setNewUser({...newUser, name: e.target.value})}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+                      placeholder="Ej: Juan Pérez"
                     />
-                    <span className="text-sm text-slate-700">{residence.id} - {residence.name}</span>
-                  </label>
-                ))}
-              </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                    <input
+                      type="email"
+                      required
+                      value={newUser.email}
+                      onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+                      placeholder="usuario@example.com"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Rol</label>
+                  <select
+                    value={newUser.role}
+                    onChange={(e) => setNewUser({...newUser, role: e.target.value})}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+                  >
+                    <option value="client">Cliente</option>
+                    <option value="admin">Administrador</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Espacios Asignados</label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {residences.map(residence => (
+                      <label key={residence.id} className="flex items-center space-x-2 p-3 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={newUser.residences.includes(residence.id)}
+                          onChange={() => toggleResidence(residence.id)}
+                          className="rounded text-slate-900 focus:ring-slate-900"
+                        />
+                        <span className="text-sm text-slate-700">{residence.id} - {residence.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-start space-x-2">
+                    <span className="text-blue-600 text-lg">ℹ️</span>
+                    <div className="text-sm text-blue-800">
+                      <p className="font-medium mb-1">El usuario recibirá un email con:</p>
+                      <ul className="list-disc ml-4 space-y-1">
+                        <li>Link de activación (válido 7 días)</li>
+                        <li>Lista de espacios asignados</li>
+                        <li>Instrucciones para crear su contraseña</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex justify-end space-x-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowInviteForm(false)}
+                    className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors flex items-center space-x-2"
+                  >
+                    <span>📧</span>
+                    <span>Enviar Invitación</span>
+                  </button>
+                </div>
+              </form>
             </div>
-            <div className="flex justify-end space-x-3 pt-4">
-              <button
-                type="button"
-                onClick={() => setShowInviteForm(false)}
-                className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors"
-              >
-                Crear Usuario
-              </button>
-            </div>
-          </form>
+          )}
         </div>
       )}
 

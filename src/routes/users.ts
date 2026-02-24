@@ -17,7 +17,144 @@ type Variables = {
 
 const users = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
-// Middleware de autenticación
+// Rutas públicas (sin autenticación) - deben ir ANTES del middleware
+// GET /invite/:token - Verificar invitación
+users.get('/invite/:token', async (c) => {
+  const token = c.req.param('token');
+  const db = c.env.DB;
+
+  try {
+    // Buscar invitación
+    const invitation = await db.prepare(`
+      SELECT 
+        i.*,
+        u.name as invited_by_name
+      FROM user_invitations i
+      LEFT JOIN users u ON i.invited_by = u.id
+      WHERE i.token = ? AND i.status = 'pending'
+    `).bind(token).first();
+
+    if (!invitation) {
+      return c.json({ success: false, error: 'Invitación no válida o ya utilizada' }, 404);
+    }
+
+    // Verificar si expiró
+    const now = new Date();
+    const expiresAt = new Date(invitation.expires_at as string);
+    if (now > expiresAt) {
+      return c.json({ success: false, error: 'Esta invitación ha expirado' }, 400);
+    }
+
+    // Parsear residencias
+    let residences = [];
+    let residenceCount = 0;
+    try {
+      residences = JSON.parse(invitation.residences as string || '[]');
+      residenceCount = residences.length;
+    } catch (e) {
+      console.error('Error parsing residences:', e);
+    }
+
+    return c.json({
+      success: true,
+      invitation: {
+        email: invitation.email,
+        role: invitation.role,
+        invited_by_name: invitation.invited_by_name,
+        residence_count: residenceCount,
+        expires_at: invitation.expires_at
+      }
+    });
+  } catch (error: any) {
+    console.error('Error fetching invitation:', error);
+    return c.json({ success: false, error: 'Error al verificar invitación' }, 500);
+  }
+});
+
+// POST /invite/:token/accept - Aceptar invitación
+users.post('/invite/:token/accept', async (c) => {
+  const token = c.req.param('token');
+  const { password } = await c.req.json();
+  const db = c.env.DB;
+
+  if (!password || password.length < 6) {
+    return c.json({ success: false, error: 'La contraseña debe tener al menos 6 caracteres' }, 400);
+  }
+
+  try {
+    // Buscar invitación
+    const invitation = await db.prepare(`
+      SELECT * FROM user_invitations
+      WHERE token = ? AND status = 'pending'
+    `).bind(token).first();
+
+    if (!invitation) {
+      return c.json({ success: false, error: 'Invitación no válida o ya utilizada' }, 404);
+    }
+
+    // Verificar si expiró
+    const now = new Date();
+    const expiresAt = new Date(invitation.expires_at as string);
+    if (now > expiresAt) {
+      return c.json({ success: false, error: 'Esta invitación ha expirado' }, 400);
+    }
+
+    // Hash de contraseña
+    const hashedPassword = await hashPassword(password);
+
+    // Crear usuario
+    const userResult = await db.prepare(`
+      INSERT INTO users (email, name, password, role)
+      VALUES (?, ?, ?, ?)
+    `).bind(
+      invitation.email,
+      invitation.email.split('@')[0], // Nombre temporal
+      hashedPassword,
+      invitation.role
+    ).run();
+
+    if (!userResult.success) {
+      return c.json({ success: false, error: 'Error al crear usuario' }, 500);
+    }
+
+    const userId = userResult.meta.last_row_id;
+
+    // Asignar residencias
+    let residences = [];
+    try {
+      residences = JSON.parse(invitation.residences as string || '[]');
+    } catch (e) {
+      console.error('Error parsing residences:', e);
+    }
+
+    if (residences.length > 0) {
+      for (const residenceId of residences) {
+        await db.prepare(`
+          INSERT INTO user_residences (user_id, residence_id)
+          VALUES (?, ?)
+        `).bind(userId, residenceId).run();
+      }
+    }
+
+    // Marcar invitación como aceptada
+    await db.prepare(`
+      UPDATE user_invitations
+      SET status = 'accepted', accepted_at = CURRENT_TIMESTAMP
+      WHERE token = ?
+    `).bind(token).run();
+
+    return c.json({
+      success: true,
+      message: 'Cuenta creada exitosamente',
+      userId
+    });
+  } catch (error: any) {
+    console.error('Error accepting invitation:', error);
+    return c.json({ success: false, error: 'Error al aceptar invitación' }, 500);
+  }
+});
+
+// Middleware de autenticación para rutas protegidas
 users.use('/*', authMiddleware);
 
 // Listar usuarios (admin ve todos, cliente ve solo de sus residencias)
