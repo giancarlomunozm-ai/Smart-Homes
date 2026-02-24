@@ -531,16 +531,21 @@ const ResidenceHeader = ({ residence, activeTab, onTabChange, onBack }) => {
         </div>
 
         <nav className="flex gap-16 border-b border-slate-200/60 w-full">
-          {['systems', 'documents', 'history', 'support'].map(tab => (
+          {[
+            { id: 'systems', label: '🏠 Sistemas', icon: 'Home' },
+            { id: 'documents', label: '📁 Documentos', icon: 'FileText' },
+            { id: 'history', label: '📊 Historial', icon: 'Activity' },
+            { id: 'support', label: '💬 Soporte', icon: 'MessageSquare' }
+          ].map(tab => (
             <button
-              key={tab}
-              onClick={() => onTabChange(tab)}
-              className={`text-[11px] uppercase tracking-[0.5em] pb-6 transition-all relative ${
-                activeTab === tab ? 'text-slate-950 font-black' : 'text-slate-300 hover:text-slate-500'
+              key={tab.id}
+              onClick={() => onTabChange(tab.id)}
+              className={`text-[11px] uppercase tracking-[0.5em] pb-6 transition-all relative flex items-center gap-2 ${
+                activeTab === tab.id ? 'text-slate-950 font-black' : 'text-slate-300 hover:text-slate-500'
               }`}
             >
-              {tab}
-              {activeTab === tab && (
+              {tab.label}
+              {activeTab === tab.id && (
                 <div className="absolute bottom-0 left-0 w-full h-[3px] bg-slate-950 animate-in fade-in slide-in-from-bottom-2 duration-500" />
               )}
             </button>
@@ -953,10 +958,10 @@ const DevicesList = ({ devices, systems, onSelectDevice, userRole, residenceId, 
           <thead className="bg-slate-50 border-b border-slate-200">
             <tr>
               <th className="px-4 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Nombre</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">IP</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">IP / MAC</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Sistema</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Marca/Modelo</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Estado</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Credenciales</th>
               <th className="px-4 py-3 text-right text-xs font-medium text-slate-700 uppercase tracking-wider">Acciones</th>
             </tr>
           </thead>
@@ -973,6 +978,9 @@ const DevicesList = ({ devices, systems, onSelectDevice, userRole, residenceId, 
                       {device.ip}
                       {hasIPConflict && <span className="ml-2 text-xs">⚠️ DUPLICADA</span>}
                     </div>
+                    <div className="text-xs font-mono text-slate-400 mt-1">
+                      {device.mac}
+                    </div>
                   </td>
                   <td className="px-4 py-4">
                     <span className="px-2 py-1 text-xs bg-slate-100 text-slate-700 rounded">
@@ -983,12 +991,9 @@ const DevicesList = ({ devices, systems, onSelectDevice, userRole, residenceId, 
                     <div className="text-sm text-slate-600">{device.brand} {device.model}</div>
                   </td>
                   <td className="px-4 py-4">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-2 h-2 rounded-full ${
-                        device.status === 'Online' ? 'bg-emerald-500' : 
-                        device.status === 'Maintenance' ? 'bg-yellow-500' : 'bg-slate-300'
-                      }`} />
-                      <span className="text-xs text-slate-600">{device.status}</span>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-slate-600 font-medium">🔐 {device.username}</span>
+                      <span className="text-xs text-slate-400 font-mono">{'•'.repeat(8)}</span>
                     </div>
                   </td>
                   <td className="px-4 py-4 text-right">
@@ -1043,33 +1048,85 @@ const SystemsGrid = ({ systems, devices, onSelectSystem }) => {
     return devices.filter(d => d.system_id === systemId).length;
   };
 
+  // Separar sistemas con dispositivos de sistemas sin dispositivos
+  const systemsWithDevices = systems.filter(sys => getDeviceCount(sys.id) > 0);
+  const systemsWithoutDevices = systems.filter(sys => getDeviceCount(sys.id) === 0);
+
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-x-8 gap-y-16 animate-in fade-in duration-1000">
-      {systems.map(sys => {
-        const count = getDeviceCount(sys.id);
-        return (
-          <button 
-            key={sys.id}
-            onClick={() => onSelectSystem(sys.id)}
-            className="group text-left space-y-6"
-          >
-            <div className="aspect-square bg-white flex items-center justify-center relative transition-all duration-700 ease-out">
-              <div className="absolute inset-0 border border-slate-100" />
-              <div className="absolute inset-0 border-[1.5px] border-transparent group-hover:border-slate-950 transition-all duration-500 m-[-1px]" />
-              <div className="text-slate-200 group-hover:text-slate-950 transition-all duration-500 transform group-hover:scale-90">
-                <Icon name={sys.icon} size={64} />
+    <div className="space-y-20">
+      {/* Sistemas Configurados */}
+      {systemsWithDevices.length > 0 && (
+        <div className="space-y-8">
+          <div className="flex items-center gap-4">
+            <div className="h-[2px] w-12 bg-slate-950" />
+            <h3 className="text-[11px] uppercase tracking-[0.6em] text-slate-950 font-black">
+              Sistemas del Proyecto
+            </h3>
+            <div className="h-[1px] flex-1 bg-slate-200" />
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-x-8 gap-y-16 animate-in fade-in duration-1000">
+            {systemsWithDevices.map(sys => {
+              const count = getDeviceCount(sys.id);
+              return (
+                <button 
+                  key={sys.id}
+                  onClick={() => onSelectSystem(sys.id)}
+                  className="group text-left space-y-6"
+                >
+                  <div className="aspect-square bg-white flex items-center justify-center relative transition-all duration-700 ease-out">
+                    <div className="absolute inset-0 border border-slate-100" />
+                    <div className="absolute inset-0 border-[1.5px] border-transparent group-hover:border-slate-950 transition-all duration-500 m-[-1px]" />
+                    <div className="text-slate-200 group-hover:text-slate-950 transition-all duration-500 transform group-hover:scale-90">
+                      <Icon name={sys.icon} size={64} />
+                    </div>
+                    <div className="absolute bottom-4 opacity-0 group-hover:opacity-100 group-hover:-translate-y-1 transition-all duration-500">
+                      <span className="text-[8px] font-black uppercase tracking-[0.4em] text-slate-950">{count} Units</span>
+                    </div>
+                  </div>
+                  <div className="space-y-2 px-1">
+                    <h3 className="text-[10px] font-black text-slate-950 uppercase tracking-[0.4em] group-hover:tracking-[0.5em] transition-all">{sys.name}</h3>
+                    <div className="h-[2px] w-6 bg-slate-900/10 group-hover:w-full group-hover:bg-slate-950 transition-all duration-700" />
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Sistemas Sin Configurar - Mejoras Sugeridas */}
+      {systemsWithoutDevices.length > 0 && (
+        <div className="space-y-8">
+          <div className="flex items-center gap-4">
+            <div className="h-[2px] w-12 bg-slate-300" />
+            <h3 className="text-[11px] uppercase tracking-[0.6em] text-slate-400 font-black">
+              Mejoras Sugeridas
+            </h3>
+            <div className="h-[1px] flex-1 bg-slate-200" />
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-x-8 gap-y-16 opacity-50">
+            {systemsWithoutDevices.map(sys => (
+              <div 
+                key={sys.id}
+                className="text-left space-y-6 cursor-not-allowed"
+              >
+                <div className="aspect-square bg-white/50 flex items-center justify-center relative border border-dashed border-slate-200">
+                  <div className="text-slate-200">
+                    <Icon name={sys.icon} size={64} />
+                  </div>
+                  <div className="absolute bottom-4">
+                    <span className="text-[8px] font-black uppercase tracking-[0.4em] text-slate-300">No Config</span>
+                  </div>
+                </div>
+                <div className="space-y-2 px-1">
+                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">{sys.name}</h3>
+                  <div className="h-[2px] w-6 bg-slate-200" />
+                </div>
               </div>
-              <div className="absolute bottom-4 opacity-0 group-hover:opacity-100 group-hover:-translate-y-1 transition-all duration-500">
-                <span className="text-[8px] font-black uppercase tracking-[0.4em] text-slate-950">{count} Units</span>
-              </div>
-            </div>
-            <div className="space-y-2 px-1">
-              <h3 className="text-[10px] font-black text-slate-950 uppercase tracking-[0.4em] group-hover:tracking-[0.5em] transition-all">{sys.name}</h3>
-              <div className="h-[2px] w-6 bg-slate-900/10 group-hover:w-full group-hover:bg-slate-950 transition-all duration-700" />
-            </div>
-          </button>
-        );
-      })}
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -1392,38 +1449,35 @@ const SystemDevices = ({ system, devices, onBack, onSelectDevice, userRole, resi
           <div key={device.id} className="group text-left space-y-8 relative">
             <div className="h-[3px] w-16 bg-slate-100 group-hover:w-full group-hover:bg-slate-950 transition-all duration-700 ease-in-out" />
             <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <p className="text-[10px] font-mono tracking-widest text-slate-400 uppercase font-black">{device.ip}</p>
-                <div className="flex items-center gap-3">
-                  <div className={`w-2 h-2 rounded-full transition-colors duration-500 ${
-                    device.status === 'Online' ? 'bg-emerald-500' : 
-                    device.status === 'Maintenance' ? 'bg-yellow-500' : 'bg-slate-200'
-                  }`} />
-                  {userRole === 'admin' && (
-                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openEditModal(device);
-                        }}
-                        className="text-slate-600 hover:text-slate-900 text-xs"
-                        title="Editar"
-                      >
-                        ✏️
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteDevice(device.id);
-                        }}
-                        className="text-red-600 hover:text-red-800 text-xs"
-                        title="Eliminar"
-                      >
-                        🗑️
-                      </button>
-                    </div>
-                  )}
+              <div className="flex justify-between items-start">
+                <div className="flex-1 space-y-1">
+                  <p className="text-[10px] font-mono tracking-widest text-slate-400 uppercase font-black">{device.ip}</p>
+                  <p className="text-[9px] font-mono tracking-wider text-slate-300 uppercase">MAC: {device.mac}</p>
                 </div>
+                {userRole === 'admin' && (
+                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEditModal(device);
+                      }}
+                      className="text-slate-600 hover:text-slate-900 text-xs"
+                      title="Editar"
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteDevice(device.id);
+                      }}
+                      className="text-red-600 hover:text-red-800 text-xs"
+                      title="Eliminar"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                )}
               </div>
               <button 
                 onClick={() => onSelectDevice(device)}
@@ -1432,6 +1486,11 @@ const SystemDevices = ({ system, devices, onBack, onSelectDevice, userRole, resi
                 <h4 className="text-3xl font-light text-slate-900 group-hover:text-slate-950 transition-colors tracking-tighter leading-tight">{device.name}</h4>
                 <p className="text-[11px] text-slate-500 uppercase tracking-[0.25em] font-black">{device.brand} • {device.model}</p>
               </button>
+              {/* Mostrar credenciales */}
+              <div className="pt-2 space-y-1">
+                <p className="text-[9px] text-slate-400 uppercase tracking-wider font-bold">🔐 {device.username}</p>
+                <p className="text-[9px] text-slate-300 font-mono">{'•'.repeat(8)}</p>
+              </div>
             </div>
           </div>
         ))}
