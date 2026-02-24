@@ -1581,7 +1581,7 @@ const DocumentsTab = ({ residenceId, token, userRole }) => {
   const [showUpload, setShowUpload] = React.useState(false);
   const [uploading, setUploading] = React.useState(false);
   const [newFile, setNewFile] = React.useState({
-    file_category: 'topology',
+    file_category: 'entrega',
     description: ''
   });
   const [selectedFile, setSelectedFile] = React.useState(null);
@@ -1652,7 +1652,7 @@ const DocumentsTab = ({ residenceId, token, userRole }) => {
 
         const data = await response.json();
         if (data.success) {
-          setNewFile({ file_category: 'topology', description: '' });
+          setNewFile({ file_category: 'entrega', description: '' });
           setSelectedFile(null);
           setShowUpload(false);
           fetchFiles();
@@ -1697,6 +1697,7 @@ const DocumentsTab = ({ residenceId, token, userRole }) => {
 
   const getCategoryLabel = (category) => {
     const labels = {
+      entrega: 'Acta de Entrega',
       topology: 'Topología',
       contract: 'Contrato',
       delivery: 'Acta de Entrega',
@@ -1709,6 +1710,7 @@ const DocumentsTab = ({ residenceId, token, userRole }) => {
 
   const getCategoryIcon = (category) => {
     const icons = {
+      entrega: '📋',
       topology: '🗺️',
       contract: '📄',
       delivery: '📦',
@@ -1790,12 +1792,12 @@ const DocumentsTab = ({ residenceId, token, userRole }) => {
                   onChange={(e) => setNewFile({...newFile, file_category: e.target.value})}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent text-sm"
                 >
-                  <option value="topology">Topología</option>
-                  <option value="contract">Contrato</option>
-                  <option value="delivery">Acta de Entrega</option>
-                  <option value="manual">Manual</option>
-                  <option value="invoice">Factura</option>
-                  <option value="other">Otro</option>
+                  <option value="entrega">📋 Acta de Entrega</option>
+                  <option value="topology">🗺️ Topología</option>
+                  <option value="contract">📄 Contrato</option>
+                  <option value="manual">📚 Manual</option>
+                  <option value="invoice">🧾 Factura</option>
+                  <option value="other">📎 Otro</option>
                 </select>
               </div>
               <div>
@@ -1815,7 +1817,7 @@ const DocumentsTab = ({ residenceId, token, userRole }) => {
                 onClick={() => {
                   setShowUpload(false);
                   setSelectedFile(null);
-                  setNewFile({ file_category: 'topology', description: '' });
+                  setNewFile({ file_category: 'entrega', description: '' });
                 }}
                 className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm"
               >
