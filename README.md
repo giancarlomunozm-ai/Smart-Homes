@@ -2,15 +2,15 @@
 
 Sistema de gestión inteligente de residencias con control de acceso diferenciado para equipos de soporte y clientes finales.
 
-## 📦 Versión Actual: v1.3 (2026-02-12)
+## 📦 Versión Actual: v1.4 (2026-02-24)
 
 ### ✨ Últimas actualizaciones:
+- ✅ **Sistema de Invitaciones por Email** - Envío automático vía Resend
+- ✅ **Página de Activación** - URL pública `/invite/:token` para nuevos usuarios
+- ✅ **Tokens seguros UUID** - Expiración automática en 7 días
 - ✅ **Gestión completa de usuarios** - Editar nombre, email, residencias asignadas
-- ✅ **Conteo correcto de residencias** - Muestra número exacto por usuario
-- ✅ **Agregar dispositivos** - Formulario completo con todos los campos
-- ✅ **Editar dispositivos** - Modal de edición con datos pre-llenados
-- ✅ **Eliminar dispositivos** - Confirmación y registro de eventos
-- ✅ **Permisos por rol** - Solo admin puede gestionar usuarios y dispositivos
+- ✅ **Sistema de Archivos Adjuntos** - PDFs e imágenes por residencia/espacio
+- ✅ **UI mejorada** - "Spaces" en lugar de "Residences", separación de sistemas configurados
 
 ## 🌐 URLs DE PRODUCCIÓN
 
@@ -103,10 +103,21 @@ Password: cliente123
 - Solo admin puede cambiar estados
 - Timeline de eventos por residencia
 
-### ✅ Gestión de Usuarios
-- Admin: Puede invitar a usuarios a cualquier residencia
-- Cliente: Solo puede invitar a sus residencias asignadas
-- Control de permisos granular
+### ✅ Gestión de Usuarios con Invitaciones
+- **Sistema de Invitaciones por Email**: Envío automático mediante Resend API
+- **Tokens UUID seguros**: Únicos, imposibles de adivinar, expiración en 7 días
+- **Página de Activación Pública**: `/invite/:token` para crear cuenta sin login
+- **Email Profesional**: Plantilla HTML responsive con branding
+- **Admin**: Puede invitar a usuarios a cualquier residencia
+- **Cliente**: Solo puede invitar a sus residencias asignadas
+- **Control de permisos granular**: Roles y permisos diferenciados
+
+### ✅ Sistema de Archivos Adjuntos
+- **Subida de documentos**: PDFs, imágenes (JPG, PNG, GIF, WebP)
+- **Categorías**: Entrega, Topologías, Contratos, Manuales, Facturas, Otros
+- **Almacenamiento D1**: Base de datos con URLs públicas
+- **Permisos**: Admin (subir, ver, eliminar), Cliente (solo ver y descargar)
+- **Visualización**: Grid de tarjetas con previews y metadatos
 
 ---
 
@@ -136,15 +147,16 @@ Password: cliente123
 
 ## 📊 ESTADÍSTICAS
 
-- **Líneas de código**: ~15,000+
-- **Endpoints API**: 30+
-- **Tablas DB**: 7
-- **Usuarios demo**: 3
-- **Residencias**: 3
-- **Dispositivos**: 11
+- **Líneas de código**: ~18,000+
+- **Endpoints API**: 36+
+- **Tablas DB**: 8 (users, residences, devices, systems, events, tickets, user_residences, user_invitations, residence_files)
+- **Usuarios demo**: 4 (admin + 3 clientes)
+- **Espacios/Residencias**: 4 (incluye Cream Café)
+- **Dispositivos**: 15+ (incluyendo Sonos)
 - **Sistemas**: 7 categorías
 - **Tickets**: 4 demo
-- **Eventos**: 11+
+- **Eventos**: 15+
+- **Email Service**: Resend API integrada
 
 ---
 
@@ -229,8 +241,19 @@ POST /api/support/tickets/:id/responses
 ### Usuarios
 ```bash
 GET    /api/users                # Admin: todos, Cliente: sus invitados
-POST   /api/users                # Invitar usuario
+POST   /api/users/invite         # Invitar usuario (envío de email)
+GET    /api/users/invite/:token  # Verificar invitación (público)
+POST   /api/users/invite/:token/accept  # Aceptar invitación (público)
+PUT    /api/users/:id            # Editar usuario (admin only)
 DELETE /api/users/:id            # Admin only
+```
+
+### Archivos
+```bash
+GET    /api/files/residence/:id  # Listar archivos de una residencia
+GET    /api/files/:residenceId/:fileId  # Descargar archivo
+POST   /api/files/upload         # Subir archivo (admin only)
+DELETE /api/files/:fileId        # Eliminar archivo (admin only)
 ```
 
 ---
@@ -337,6 +360,10 @@ git push origin main     # Push a GitHub
 - [GITHUB_DEPLOYMENT.md](./GITHUB_DEPLOYMENT.md) - Guía de deployment GitHub
 - [CONFIGURAR_D1_PRODUCCION.md](./CONFIGURAR_D1_PRODUCCION.md) - Setup D1 database
 - [DEPLOYMENT_FINAL.md](./DEPLOYMENT_FINAL.md) - Resumen del deployment
+- [CREAM_CAFE_PROYECTO.md](./CREAM_CAFE_PROYECTO.md) - Documentación Cream Café
+- [FEATURE_ARCHIVOS_ADJUNTOS.md](./FEATURE_ARCHIVOS_ADJUNTOS.md) - Sistema de archivos
+- [INVITACIONES_EMAIL.md](./INVITACIONES_EMAIL.md) - Sistema de invitaciones (backend)
+- [SISTEMA_INVITACIONES_COMPLETO.md](./SISTEMA_INVITACIONES_COMPLETO.md) - Sistema completo de invitaciones
 
 ---
 
@@ -373,17 +400,20 @@ Este proyecto es privado y confidencial. Todos los derechos reservados.
 **✅ PRODUCCIÓN - 100% FUNCIONAL**
 
 - Backend: ✅ Completado
-- Frontend: ✅ Core completado (60%)
-- API: ✅ 30+ endpoints operativos
+- Frontend: ✅ Core completado (75%)
+- API: ✅ 36+ endpoints operativos
 - Database: ✅ D1 con datos demo
 - Auth: ✅ JWT + SHA-256
+- Email: ✅ Resend integrado
+- Invitaciones: ✅ Sistema completo
+- Archivos: ✅ Upload/Download funcional
 - Deployment: ✅ Cloudflare Pages
 - GitHub: ✅ Repositorio configurado
-- Documentación: ✅ 6 archivos .md
+- Documentación: ✅ 9 archivos .md
 
 ---
 
-**Última actualización**: 2026-02-12  
-**Versión**: 1.0.0  
-**Commit**: fcd107b  
+**Última actualización**: 2026-02-24  
+**Versión**: 1.4.0  
+**Commit**: 8e2446a  
 **Status**: 🟢 ONLINE
