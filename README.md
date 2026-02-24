@@ -55,13 +55,22 @@ Password: cliente123
 
 ---
 
-## 🏠 RESIDENCIAS DEMO
+## 🏠 RESIDENCIAS Y PROYECTOS
 
 | ID | Nombre | Ubicación | Suscripción | Dispositivos | Cliente |
 |----|--------|-----------|-------------|--------------|---------|
 | H-001 | Residencial Valle Real | Zapopan, Jal. | ✅ Activa | 4 | Juan Pérez |
 | H-002 | Villa Montana | Monterrey, NL. | ✅ Activa | 3 | María García |
 | H-003 | Penthouse Reforma | CDMX | ❌ Inactiva | 4 | Solo Admin |
+| H-004 | **Cream Café** 🎵 | Cabo San Lucas, BCS | ✅ Premium | 4 Sonos | Smart Admin |
+
+### 📋 Proyecto Destacado: Cream Café
+- **Sistema**: Audio Sonos Multi-Zona (4 zonas)
+- **Equipos**: 1 Sonos Port + 3 Sonos Amp
+- **Zonas**: Áreas Comunes, Bar, Cafetería, Terraza
+- **Documentación**: [Ver Detalles](./CREAM_CAFE_PROYECTO.md) | [PDF Memoria Técnica](https://www.genspark.ai/api/files/s/dZQV759A)
+- **Orden**: CCO1584 | **Factura**: AFAD373
+- **Entrega**: 23 febrero 2026
 
 ---
 
