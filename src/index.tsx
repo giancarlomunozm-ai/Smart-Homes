@@ -10,6 +10,7 @@ import events from './routes/events';
 import support from './routes/support';
 import users from './routes/users';
 import files from './routes/files';
+import arrivalChecks from './routes/arrival-checks';
 
 type Bindings = {
   DB: D1Database;
@@ -36,6 +37,7 @@ app.route('/api/events', events);
 app.route('/api/support', support);
 app.route('/api/users', users);
 app.route('/api/files', files);
+app.route('/api/arrival-checks', arrivalChecks);
 
 // Health check
 app.get('/api/health', (c) => {
