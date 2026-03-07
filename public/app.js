@@ -533,6 +533,7 @@ const ResidenceHeader = ({ residence, activeTab, onTabChange, onBack }) => {
         <nav className="flex gap-16 border-b border-slate-200/60 w-full">
           {[
             { id: 'systems', label: '🏠 Sistemas', icon: 'Home' },
+            { id: 'arrival-check', label: '✅ Arrival Check', icon: 'CheckSquare' },
             { id: 'documents', label: '📁 Documentos', icon: 'FileText' },
             { id: 'history', label: '📊 Historial', icon: 'Activity' },
             { id: 'support', label: '💬 Soporte', icon: 'MessageSquare' }
@@ -2069,6 +2070,10 @@ const App = () => {
         return <HistoryTab residenceId={currentResidence.id} token={token} />;
       }
 
+      if (activeTab === 'arrival-check') {
+        return <ArrivalCheckTab residenceId={currentResidence.id} token={token} userRole={user?.role} />;
+      }
+
       if (activeTab === 'documents') {
         return <DocumentsTab residenceId={currentResidence.id} token={token} userRole={user?.role} />;
       }
@@ -2990,6 +2995,248 @@ const UserManagement = ({ token, userRole }) => {
           <div className="text-2xl font-bold text-slate-800">{users.filter(u => u.role === 'client').length}</div>
           <div className="text-sm text-slate-500">Clientes</div>
         </div>
+      </div>
+    </div>
+  );
+};
+
+// ====================ARRIVAL CHECK COMPONENT====================
+const ArrivalCheckTab = ({ residenceId, token, userRole }) => {
+  const [arrivalCheck, setArrivalCheck] = React.useState(null);
+  const [items, setItems] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [groupedItems, setGroupedItems] = React.useState({});
+  const [expandedRooms, setExpandedRooms] = React.useState({});
+
+  React.useEffect(() => {
+    fetchArrivalCheck();
+  }, [residenceId]);
+
+  const fetchArrivalCheck = async () => {
+    try {
+      // Obtener arrival checks para esta residencia
+      const checksResponse = await fetch('/api/arrival-checks', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const checksData = await checksResponse.json();
+      
+      if (checksData.success && checksData.checks.length > 0) {
+        const check = checksData.checks.find(c => c.residence_id === residenceId);
+        
+        if (check) {
+          setArrivalCheck(check);
+          
+          // Obtener items del checklist
+          const itemsResponse = await fetch(`/api/arrival-checks/${check.id}/items`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          const itemsData = await itemsResponse.json();
+          
+          if (itemsData.success) {
+            setItems(itemsData.items);
+            
+            // Agrupar items por room
+            const grouped = itemsData.items.reduce((acc, item) => {
+              if (!acc[item.room]) {
+                acc[item.room] = [];
+              }
+              acc[item.room].push(item);
+              return acc;
+            }, {});
+            setGroupedItems(grouped);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching arrival check:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateItem = async (itemId, field, value) => {
+    if (!arrivalCheck) return;
+    
+    const item = items.find(i => i.id === itemId);
+    const updatedData = {
+      installed: field === 'installed' ? value : item.installed,
+      functional: field === 'functional' ? value : item.functional,
+      notes: field === 'notes' ? value : item.notes
+    };
+
+    try {
+      const response = await fetch(`/api/arrival-checks/${arrivalCheck.id}/items/${itemId}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updatedData)
+      });
+
+      if (response.ok) {
+        // Actualizar estado local
+        setItems(items.map(i => 
+          i.id === itemId ? { ...i, [field]: value } : i
+        ));
+      }
+    } catch (error) {
+      console.error('Error updating item:', error);
+    }
+  };
+
+  const toggleRoom = (room) => {
+    setExpandedRooms(prev => ({
+      ...prev,
+      [room]: !prev[room]
+    }));
+  };
+
+  const getProgress = () => {
+    const total = items.length;
+    const checked = items.filter(i => i.installed && i.functional).length;
+    return { total, checked, percentage: total > 0 ? Math.round((checked / total) * 100) : 0 };
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-slate-400">Cargando Arrival Check...</div>
+      </div>
+    );
+  }
+
+  if (!arrivalCheck) {
+    return (
+      <div className="bg-white rounded-lg border border-slate-200 p-8 text-center">
+        <div className="text-6xl mb-4">📋</div>
+        <h3 className="text-xl font-bold text-slate-800 mb-2">No hay Arrival Check programado</h3>
+        <p className="text-slate-600">Esta residencia no tiene un Arrival Check activo.</p>
+      </div>
+    );
+  }
+
+  const progress = getProgress();
+
+  return (
+    <div className="space-y-6">
+      {/* Header con info del Arrival Check */}
+      <div className="bg-white rounded-lg border border-slate-200 p-6">
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <h3 className="text-2xl font-bold text-slate-800 mb-2">Arrival Check</h3>
+            <div className="flex items-center gap-4 text-sm text-slate-600">
+              <span>📅 {new Date(arrivalCheck.scheduled_date).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+              <span>🕐 {arrivalCheck.scheduled_time}</span>
+              <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                arrivalCheck.status === 'completed' ? 'bg-green-100 text-green-700' :
+                arrivalCheck.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
+                'bg-yellow-100 text-yellow-700'
+              }`}>
+                {arrivalCheck.status === 'completed' ? 'Completado' :
+                 arrivalCheck.status === 'in_progress' ? 'En Progreso' : 'Pendiente'}
+              </span>
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-4xl font-bold text-slate-800">{progress.percentage}%</div>
+            <div className="text-sm text-slate-500">{progress.checked} de {progress.total} items</div>
+          </div>
+        </div>
+        
+        {/* Progress bar */}
+        <div className="w-full bg-slate-100 rounded-full h-2">
+          <div 
+            className="bg-green-500 h-2 rounded-full transition-all duration-500"
+            style={{ width: `${progress.percentage}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Checklist por rooms */}
+      <div className="space-y-4">
+        {Object.entries(groupedItems).map(([room, roomItems]) => {
+          const roomProgress = {
+            total: roomItems.length,
+            checked: roomItems.filter(i => i.installed && i.functional).length
+          };
+          const isExpanded = expandedRooms[room];
+
+          return (
+            <div key={room} className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+              <button
+                onClick={() => toggleRoom(room)}
+                className="w-full px-6 py-4 flex items-center justify-between hover:bg-slate-50 transition-colors"
+              >
+                <div className="flex items-center gap-4">
+                  <span className="text-2xl">{isExpanded ? '📂' : '📁'}</span>
+                  <div className="text-left">
+                    <h4 className="font-bold text-slate-800">{room}</h4>
+                    <p className="text-sm text-slate-500">{roomProgress.checked} / {roomProgress.total} items completados</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="w-32 bg-slate-100 rounded-full h-2">
+                    <div 
+                      className="bg-blue-500 h-2 rounded-full"
+                      style={{ width: `${roomProgress.total > 0 ? (roomProgress.checked / roomProgress.total) * 100 : 0}%` }}
+                    />
+                  </div>
+                  <span className="text-slate-400">{isExpanded ? '▲' : '▼'}</span>
+                </div>
+              </button>
+
+              {isExpanded && (
+                <div className="border-t border-slate-200">
+                  <table className="w-full">
+                    <thead className="bg-slate-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-700 uppercase">Item</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-700 uppercase">Brand/Model</th>
+                        <th className="px-6 py-3 text-center text-xs font-medium text-slate-700 uppercase">Qty</th>
+                        <th className="px-6 py-3 text-center text-xs font-medium text-slate-700 uppercase">Instalado</th>
+                        <th className="px-6 py-3 text-center text-xs font-medium text-slate-700 uppercase">Funcional</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200">
+                      {roomItems.map(item => (
+                        <tr key={item.id} className="hover:bg-slate-50">
+                          <td className="px-6 py-4">
+                            <div className="text-sm font-medium text-slate-900">{item.item_name}</div>
+                            <div className="text-xs text-slate-500">{item.system}</div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm text-slate-700">{item.brand || '-'}</div>
+                            <div className="text-xs text-slate-500">{item.model || '-'}</div>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <span className="text-sm font-medium text-slate-700">{item.quantity}</span>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <input
+                              type="checkbox"
+                              checked={item.installed === 1}
+                              onChange={(e) => handleUpdateItem(item.id, 'installed', e.target.checked)}
+                              className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                            />
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <input
+                              type="checkbox"
+                              checked={item.functional === 1}
+                              onChange={(e) => handleUpdateItem(item.id, 'functional', e.target.checked)}
+                              className="w-5 h-5 rounded border-slate-300 text-green-600 focus:ring-green-500 cursor-pointer"
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
