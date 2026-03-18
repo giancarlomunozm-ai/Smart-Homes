@@ -154,8 +154,8 @@ El problema es que Cloudflare Workers tiene límites de CPU (10ms) que hacen dif
 
 **Recursos del bot ya creados:**
 - Bot: `@SmartSpacesBot`
-- Token: `8472037220:AAGoIpxD7immozs-LkDCwYZ8-ooMygAZPqM`
-- Gemini API Key: `AIzaSyDKfW07f8CdTqfg0p3a5-bK1GaJyIhv2q0`
+- Token: ``
+- Gemini API Key:
 
 ---
 
