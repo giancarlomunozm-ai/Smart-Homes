@@ -9,7 +9,7 @@
     "deploy": "npm run build && wrangler pages deploy dist --project-name smart-homes",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
     "db:migrate:local": "wrangler d1 migrations apply smart-homes-production --local",
-    "db:migrate:prod": "wrangler d1 migrations apply smart-homes-production",
+    "db:migrate:prod": "wrangler d1 migrations apply smart-homes-production --remote",
     "db:seed": "wrangler d1 execute smart-homes-production --local --file=./seed.sql",
     "db:reset": "rm -rf .wrangler/state/v3/d1 && npm run db:migrate:local && npm run db:seed"
   },

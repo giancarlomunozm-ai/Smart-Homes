@@ -351,24 +351,24 @@ const Icon = ({ name, size = 16, className = '' }) => {
 // Header Global
 const GlobalHeader = ({ currentView, currentResidence, onNavigate, onLogout, userRole }) => {
   return (
-    <header className="fixed top-0 left-0 right-0 h-28 bg-[#F9F9F9]/70 backdrop-blur-3xl z-40 px-12 md:px-20 flex items-center justify-between border-b border-slate-200/40">
+    <header className="fixed top-0 left-0 right-0 h-20 md:h-28 bg-[#F9F9F9]/85 backdrop-blur-3xl z-40 px-5 sm:px-8 md:px-20 flex items-center justify-between border-b border-slate-200/40">
       <div 
-        className="flex items-center gap-8 cursor-pointer group"
+        className="flex items-center gap-4 md:gap-8 cursor-pointer group min-w-0"
         onClick={() => onNavigate('directory')}
       >
         <div className="relative">
-          <div className="w-10 h-10 bg-slate-950 flex items-center justify-center group-hover:rotate-180 transition-transform duration-1000">
-            <Icon name="Box" size={20} className="text-white" />
+          <div className="w-9 h-9 md:w-10 md:h-10 bg-slate-950 flex items-center justify-center group-hover:rotate-180 transition-transform duration-1000">
+            <Icon name="Box" size={18} className="text-white" />
           </div>
           <div className="absolute -inset-2 border border-slate-200 opacity-40 group-hover:opacity-100 transition-opacity" />
         </div>
-        <div className="flex flex-col">
-          <span className="text-[12px] uppercase tracking-[0.8em] font-black leading-none">Smart Spaces</span>
-          <span className="text-[9px] uppercase tracking-[0.4em] text-slate-400 font-bold mt-2 italic">Infrastructure OS</span>
+        <div className="flex flex-col min-w-0">
+          <span className="text-[11px] md:text-[12px] uppercase tracking-[0.28em] md:tracking-[0.8em] font-black leading-none truncate">Smart Spaces</span>
+          <span className="text-[8px] md:text-[9px] uppercase tracking-[0.22em] md:tracking-[0.4em] text-slate-400 font-bold mt-2 italic truncate">Infrastructure OS</span>
         </div>
       </div>
 
-      <div className="flex gap-14 items-center">
+      <div className="flex gap-4 md:gap-14 items-center shrink-0">
         <div className="hidden lg:flex gap-10 border-r border-slate-200 pr-14 text-slate-400 text-[10px] uppercase tracking-[0.4em] font-black">
           {currentView === 'dashboard' && currentResidence ? (
             <div className="flex items-center gap-4">
@@ -380,20 +380,36 @@ const GlobalHeader = ({ currentView, currentResidence, onNavigate, onLogout, use
             <span>Fleet Manager</span>
           )}
         </div>
-        <div className="flex gap-10">
+        <div className="flex gap-4 md:gap-10">
           {userRole === 'admin' && (
-            <button 
-              onClick={() => onNavigate('users')}
-              className={`text-slate-400 hover:text-slate-950 transition-all hover:scale-125 ${currentView === 'users' ? 'text-slate-950 scale-125' : ''}`}
-              title="Gestión de Usuarios"
-            >
-              <Icon name="Users" size={20} />
-            </button>
+            <>
+              <button 
+                onClick={() => onNavigate('quotations')}
+                className={`hidden sm:block text-slate-400 hover:text-slate-950 transition-all hover:scale-125 ${currentView === 'quotations' ? 'text-slate-950 scale-125' : ''}`}
+                title="Cotizaciones"
+              >
+                <span className="text-lg">💼</span>
+              </button>
+              <button 
+                onClick={() => onNavigate('sales')}
+                className={`hidden sm:block text-slate-400 hover:text-slate-950 transition-all hover:scale-125 ${currentView === 'sales' ? 'text-slate-950 scale-125' : ''}`}
+                title="Ventas"
+              >
+                <span className="text-lg">📈</span>
+              </button>
+              <button 
+                onClick={() => onNavigate('users')}
+                className={`hidden sm:block text-slate-400 hover:text-slate-950 transition-all hover:scale-125 ${currentView === 'users' ? 'text-slate-950 scale-125' : ''}`}
+                title="Gestión de Usuarios"
+              >
+                <Icon name="Users" size={20} />
+              </button>
+            </>
           )}
-          <button className="text-slate-400 hover:text-slate-950 transition-all hover:scale-125">
+          <button className="hidden sm:block text-slate-400 hover:text-slate-950 transition-all hover:scale-125">
             <Icon name="Search" size={20} />
           </button>
-          <button className="text-slate-400 hover:text-slate-950 transition-all hover:scale-125">
+          <button className="hidden sm:block text-slate-400 hover:text-slate-950 transition-all hover:scale-125">
             <Icon name="Settings" size={20} />
           </button>
           <button 
@@ -489,8 +505,8 @@ const ResidenceDirectory = ({ residences, onSelectResidence }) => {
 // Header de Residencia
 const ResidenceHeader = ({ residence, activeTab, onTabChange, onBack }) => {
   return (
-    <div className="relative mb-32">
-      <div className="absolute -top-24 left-0 w-full h-[500px] pointer-events-none overflow-hidden">
+    <div className="relative mb-14 md:mb-32">
+      <div className="absolute -top-16 md:-top-24 left-0 w-full h-[360px] md:h-[500px] pointer-events-none overflow-hidden">
         <img 
           src={residence.image} 
           className="w-full h-full object-cover opacity-[0.12] grayscale mix-blend-multiply transition-opacity duration-1000" 
@@ -499,55 +515,59 @@ const ResidenceHeader = ({ residence, activeTab, onTabChange, onBack }) => {
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#F9F9F9]/40 to-[#F9F9F9]" />
       </div>
 
-      <div className="relative z-10 pt-20 flex flex-col gap-12">
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4 opacity-100">
-              <div className="h-[2px] w-12 bg-slate-950" />
-              <p className="text-[11px] uppercase tracking-[0.6em] text-slate-950 font-black">
+      <div className="relative z-10 pt-10 md:pt-20 flex flex-col gap-8 md:gap-12">
+        <div className="space-y-6 md:space-y-8">
+          <div className="flex items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3 md:gap-4 opacity-100 min-w-0">
+              <div className="h-[2px] w-8 md:w-12 bg-slate-950 shrink-0" />
+              <p className="text-[9px] md:text-[11px] uppercase tracking-[0.28em] md:tracking-[0.6em] text-slate-950 font-black truncate">
                 Smart Spaces <span className="text-slate-400 font-medium">/ Infrastructure</span>
               </p>
             </div>
             <button 
               onClick={onBack}
-              className="flex items-center gap-3 text-[10px] uppercase tracking-[0.4em] font-black text-slate-400 hover:text-red-600 transition-all group pointer-events-auto"
+              className="flex items-center gap-2 md:gap-3 text-[9px] md:text-[10px] uppercase tracking-[0.2em] md:tracking-[0.4em] font-black text-slate-400 hover:text-red-600 transition-all group pointer-events-auto shrink-0"
             >
               <Icon name="LogOut" size={14} className="group-hover:-translate-x-1 transition-transform" /> 
-              Exit Terminal
+              <span className="hidden sm:inline">Exit Terminal</span>
+              <span className="sm:hidden">Salir</span>
             </button>
           </div>
           
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
-            <h2 className="text-8xl font-extralight text-slate-950 tracking-tighter leading-[0.85] max-w-4xl">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-5 md:gap-8">
+            <h2 className="text-5xl sm:text-7xl md:text-8xl font-extralight text-slate-950 tracking-tight md:tracking-tighter leading-[0.9] max-w-4xl break-words">
               {residence.name}
             </h2>
-            <div className="flex flex-col items-end gap-2 pb-2">
-              <span className="text-[13px] font-medium text-slate-800 flex items-center gap-2 tracking-tight text-right">
+            <div className="flex flex-col items-start md:items-end gap-2 pb-2 max-w-full md:max-w-xl">
+              <span className="text-[12px] md:text-[13px] font-medium text-slate-800 flex items-start md:items-center gap-2 tracking-tight text-left md:text-right leading-relaxed">
                 <Icon name="MapPin" size={14} className="text-slate-950" /> {residence.address}
               </span>
-              <span className="text-[10px] uppercase tracking-[0.3em] text-slate-400 font-bold">Node ID: {residence.id}</span>
+              <span className="text-[9px] md:text-[10px] uppercase tracking-[0.24em] md:tracking-[0.3em] text-slate-400 font-bold">Node ID: {residence.id}</span>
             </div>
           </div>
         </div>
 
-        <nav className="flex gap-16 border-b border-slate-200/60 w-full">
+        <nav className="-mx-5 px-5 sm:mx-0 sm:px-0 flex gap-2 sm:gap-4 lg:gap-10 border-b border-slate-200/60 w-auto sm:w-full overflow-x-auto overscroll-x-contain pb-2 sm:pb-0 [scrollbar-width:none]">
           {[
             { id: 'systems', label: '🏠 Sistemas', icon: 'Home' },
+            { id: 'quotes', label: '💼 Cotizaciones', icon: 'FileText' },
             { id: 'arrival-check', label: '✅ Arrival Check', icon: 'CheckSquare' },
             { id: 'documents', label: '📁 Documentos', icon: 'FileText' },
             { id: 'history', label: '📊 Historial', icon: 'Activity' },
+            { id: 'service-history', label: '🧾 Service Log', icon: 'Activity' },
             { id: 'support', label: '💬 Soporte', icon: 'MessageSquare' }
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
-              className={`text-[11px] uppercase tracking-[0.5em] pb-6 transition-all relative flex items-center gap-2 ${
-                activeTab === tab.id ? 'text-slate-950 font-black' : 'text-slate-300 hover:text-slate-500'
+              className={`shrink-0 min-h-11 rounded-full sm:rounded-none px-4 sm:px-0 py-3 sm:pt-0 sm:pb-6 text-[10px] sm:text-[11px] uppercase tracking-[0.18em] sm:tracking-[0.34em] lg:tracking-[0.5em] transition-all relative flex items-center gap-2 ${
+                activeTab === tab.id ? 'bg-slate-950 text-white sm:bg-transparent sm:text-slate-950 font-black' : 'bg-white/70 text-slate-500 sm:bg-transparent sm:text-slate-300 hover:text-slate-700 sm:hover:text-slate-500'
               }`}
             >
-              {tab.label}
+              <Icon name={tab.icon} size={14} className="text-current" />
+              {tab.label.replace(/^[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+\s*/, '')}
               {activeTab === tab.id && (
-                <div className="absolute bottom-0 left-0 w-full h-[3px] bg-slate-950 animate-in fade-in slide-in-from-bottom-2 duration-500" />
+                <div className="hidden sm:block absolute bottom-0 left-0 w-full h-[3px] bg-slate-950 animate-in fade-in slide-in-from-bottom-2 duration-500" />
               )}
             </button>
           ))}
@@ -1998,6 +2018,22 @@ const App = () => {
       return <UserManagement token={token} userRole={user?.role} />;
     }
 
+    if (view === 'quotations') {
+      return <QuotationsDashboard token={token} residences={residences} userRole={user?.role} onOpenProject={(projectId) => {
+        const found = residences.find(r => r.id === projectId);
+        if (found) {
+          setCurrentResidence(found);
+          setView('dashboard');
+          setActiveTab('quotes');
+          window.scrollTo(0, 0);
+        }
+      }} />;
+    }
+
+    if (view === 'sales') {
+      return <SalesDashboard token={token} userRole={user?.role} />;
+    }
+
     if (view === 'dashboard' && currentResidence) {
       if (activeTab === 'systems') {
         if (selectedSystem) {
@@ -2066,8 +2102,16 @@ const App = () => {
         );
       }
 
+      if (activeTab === 'quotes') {
+        return <QuotesTab residence={currentResidence} token={token} userRole={user?.role} />;
+      }
+
       if (activeTab === 'history') {
         return <HistoryTab residenceId={currentResidence.id} token={token} />;
+      }
+
+      if (activeTab === 'service-history') {
+        return <ServiceHistoryTab residenceId={currentResidence.id} token={token} />;
       }
 
       if (activeTab === 'arrival-check') {
@@ -2103,7 +2147,7 @@ const App = () => {
         userRole={user?.role}
       />
 
-      <main className="flex-1 pt-52 pb-20 px-12 md:px-20 max-w-[1600px] mx-auto w-full">
+      <main className="flex-1 pt-28 sm:pt-36 md:pt-52 pb-14 md:pb-20 px-5 sm:px-8 md:px-20 max-w-[1600px] mx-auto w-full overflow-x-hidden">
         {view === 'dashboard' && currentResidence && (
           <ResidenceHeader 
             residence={currentResidence}
@@ -3238,6 +3282,490 @@ const ArrivalCheckTab = ({ residenceId, token, userRole }) => {
           );
         })}
       </div>
+    </div>
+  );
+};
+
+const QuotationsDashboard = ({ token, residences, userRole, onOpenProject }) => {
+  const [quotes, setQuotes] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [showCreate, setShowCreate] = React.useState(false);
+  const [form, setForm] = React.useState({
+    project_id: residences?.[0]?.id || '',
+    title: '',
+    description: '',
+    client_name: '',
+    client_email: '',
+    language_default: 'es'
+  });
+
+  const fetchQuotes = async () => {
+    try {
+      const response = await fetch('/api/quotes', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (data.success) setQuotes(data.quotes || []);
+    } catch (error) {
+      console.error('Error fetching quotes:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    if (token) fetchQuotes();
+  }, [token]);
+
+  React.useEffect(() => {
+    if (residences?.length && !form.project_id) {
+      setForm(prev => ({ ...prev, project_id: residences[0].id }));
+    }
+  }, [residences]);
+
+  const handleCreate = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch('/api/quotes', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(form)
+      });
+      const data = await response.json();
+      if (data.success) {
+        setShowCreate(false);
+        setForm({ project_id: residences?.[0]?.id || '', title: '', description: '', client_name: '', client_email: '', language_default: 'es' });
+        fetchQuotes();
+      } else {
+        alert(data.error || 'No se pudo crear la cotización');
+      }
+    } catch (error) {
+      console.error('Error creating quote:', error);
+      alert('Error al crear cotización');
+    }
+  };
+
+  const formatMoney = (value) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(value || 0));
+
+  return (
+    <div className="space-y-8">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.6em] text-slate-400 font-black mb-2">Commercial Module</p>
+          <h2 className="text-4xl md:text-5xl font-light tracking-tight text-slate-950">Quotations</h2>
+        </div>
+        {userRole === 'admin' && (
+          <button onClick={() => setShowCreate(!showCreate)} className="px-5 py-3 bg-slate-950 text-white text-xs uppercase tracking-[0.3em] font-black rounded-lg hover:bg-slate-800 transition-colors">
+            {showCreate ? 'Cerrar' : 'Nueva cotización'}
+          </button>
+        )}
+      </div>
+
+      {showCreate && (
+        <form onSubmit={handleCreate} className="bg-white border border-slate-200 rounded-2xl p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <select value={form.project_id} onChange={(e) => setForm({ ...form, project_id: e.target.value })} className="px-4 py-3 border border-slate-200 rounded-lg">
+            {residences.map(res => <option key={res.id} value={res.id}>{res.name}</option>)}
+          </select>
+          <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Título de cotización" className="px-4 py-3 border border-slate-200 rounded-lg" required />
+          <input value={form.client_name} onChange={(e) => setForm({ ...form, client_name: e.target.value })} placeholder="Nombre del cliente" className="px-4 py-3 border border-slate-200 rounded-lg" />
+          <input value={form.client_email} onChange={(e) => setForm({ ...form, client_email: e.target.value })} placeholder="Email del cliente" className="px-4 py-3 border border-slate-200 rounded-lg" />
+          <select value={form.language_default} onChange={(e) => setForm({ ...form, language_default: e.target.value })} className="px-4 py-3 border border-slate-200 rounded-lg">
+            <option value="es">Español</option>
+            <option value="en">English</option>
+          </select>
+          <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Descripción interna / alcance" className="px-4 py-3 border border-slate-200 rounded-lg md:col-span-2 min-h-[110px]" />
+          <div className="md:col-span-2 flex justify-end">
+            <button type="submit" className="px-5 py-3 bg-slate-950 text-white text-xs uppercase tracking-[0.3em] font-black rounded-lg hover:bg-slate-800 transition-colors">Crear draft</button>
+          </div>
+        </form>
+      )}
+
+      {loading ? (
+        <div className="text-slate-400">Cargando cotizaciones...</div>
+      ) : (
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+          {quotes.length === 0 ? (
+            <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center text-slate-500 xl:col-span-2">Todavía no hay cotizaciones.</div>
+          ) : quotes.map(quote => (
+            <div key={quote.id} className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="text-xs uppercase tracking-[0.3em] text-slate-400 font-black mb-2">{quote.quote_number}</div>
+                  <h3 className="text-xl font-bold text-slate-900">{quote.title}</h3>
+                  <p className="text-sm text-slate-500 mt-1">{quote.project_name || quote.project_id}</p>
+                </div>
+                <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs uppercase tracking-[0.2em] font-bold">{quote.status}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <div className="text-slate-400 uppercase text-[10px] tracking-[0.2em] font-bold">Cliente</div>
+                  <div className="text-slate-800">{quote.client_name || 'Sin asignar'}</div>
+                </div>
+                <div>
+                  <div className="text-slate-400 uppercase text-[10px] tracking-[0.2em] font-bold">Total</div>
+                  <div className="text-slate-800 font-semibold">{formatMoney(quote.total)}</div>
+                </div>
+              </div>
+              <div className="flex flex-col md:flex-row gap-3">
+                <button onClick={() => onOpenProject(quote.project_id)} className="px-4 py-3 border border-slate-200 rounded-lg text-sm font-medium hover:border-slate-400 transition-colors">Abrir proyecto</button>
+                <button className="px-4 py-3 border border-slate-200 rounded-lg text-sm font-medium hover:border-slate-400 transition-colors" onClick={() => navigator.clipboard?.writeText(`${window.location.origin}/quote/${quote.public_token}`)}>Copiar link público</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const SalesDashboard = ({ token, userRole }) => {
+  const [records, setRecords] = React.useState([]);
+  const [summary, setSummary] = React.useState(null);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const fetchSales = async () => {
+      try {
+        const response = await fetch('/api/sales', { headers: { 'Authorization': `Bearer ${token}` } });
+        const data = await response.json();
+        if (data.success) {
+          setRecords(data.records || []);
+          setSummary(data.summary || null);
+        }
+      } catch (error) {
+        console.error('Error fetching sales:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (token && userRole === 'admin') fetchSales();
+  }, [token, userRole]);
+
+  const formatMoney = (value) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(value || 0));
+
+  if (userRole !== 'admin') {
+    return <div className="py-20 text-center text-slate-400">Acceso restringido.</div>;
+  }
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <p className="text-[11px] uppercase tracking-[0.6em] text-slate-400 font-black mb-2">Commercial Pipeline</p>
+        <h2 className="text-4xl md:text-5xl font-light tracking-tight text-slate-950">Sales</h2>
+      </div>
+      {loading ? <div className="text-slate-400">Cargando ventas...</div> : (
+        <>
+          <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+            <div className="bg-white border border-slate-200 rounded-2xl p-5"><div className="text-xs uppercase tracking-[0.2em] text-slate-400 font-bold">Registros</div><div className="text-3xl font-light text-slate-900 mt-3">{summary?.total_records || 0}</div></div>
+            <div className="bg-white border border-slate-200 rounded-2xl p-5"><div className="text-xs uppercase tracking-[0.2em] text-slate-400 font-bold">Cotizado</div><div className="text-3xl font-light text-slate-900 mt-3">{formatMoney(summary?.total_expected)}</div></div>
+            <div className="bg-white border border-slate-200 rounded-2xl p-5"><div className="text-xs uppercase tracking-[0.2em] text-slate-400 font-bold">Cerrado</div><div className="text-3xl font-light text-slate-900 mt-3">{formatMoney(summary?.total_closed)}</div></div>
+            <div className="bg-white border border-slate-200 rounded-2xl p-5"><div className="text-xs uppercase tracking-[0.2em] text-slate-400 font-bold">Paid</div><div className="text-3xl font-light text-slate-900 mt-3">{summary?.paid_count || 0}</div></div>
+          </div>
+          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[760px]">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs uppercase text-slate-500">Proyecto</th>
+                    <th className="px-4 py-3 text-left text-xs uppercase text-slate-500">Quote</th>
+                    <th className="px-4 py-3 text-left text-xs uppercase text-slate-500">Cliente</th>
+                    <th className="px-4 py-3 text-left text-xs uppercase text-slate-500">Stage</th>
+                    <th className="px-4 py-3 text-left text-xs uppercase text-slate-500">Expected</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {records.map(record => (
+                    <tr key={record.id} className="border-t border-slate-100">
+                      <td className="px-4 py-4 text-sm text-slate-800">{record.project_name || record.project_id}</td>
+                      <td className="px-4 py-4 text-sm text-slate-800">{record.quote_number || '-'}</td>
+                      <td className="px-4 py-4 text-sm text-slate-800">{record.client_name || '-'}</td>
+                      <td className="px-4 py-4 text-sm"><span className="px-2 py-1 bg-slate-100 rounded-full uppercase tracking-[0.15em] text-xs font-bold text-slate-700">{record.stage}</span></td>
+                      <td className="px-4 py-4 text-sm text-slate-800">{formatMoney(record.expected_value)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+const QuotesTab = ({ residence, token, userRole }) => {
+  const [quotes, setQuotes] = React.useState([]);
+  const [selectedQuote, setSelectedQuote] = React.useState(null);
+  const [items, setItems] = React.useState([]);
+  const [pricing, setPricing] = React.useState(null);
+  const [loading, setLoading] = React.useState(true);
+  const [newItem, setNewItem] = React.useState({ title_es: '', title_en: '', quantity: 1, unit: 'unit', unit_price: 0, item_type: 'service', taxable: true });
+  const [pricingForm, setPricingForm] = React.useState({ first_hour_rate: 150, extra_hour_rate: 95, tax_rate: 0.16, currency: 'USD' });
+
+  const fetchQuotes = async () => {
+    try {
+      const response = await fetch(`/api/quotes/project/${residence.id}`, { headers: { 'Authorization': `Bearer ${token}` } });
+      const data = await response.json();
+      if (data.success) {
+        setQuotes(data.quotes || []);
+        if (!selectedQuote && data.quotes?.length) setSelectedQuote(data.quotes[0]);
+      }
+    } catch (error) {
+      console.error('Error fetching project quotes:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchQuoteDetail = async (quoteId) => {
+    try {
+      const response = await fetch(`/api/quotes/${quoteId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+      const data = await response.json();
+      if (data.success) {
+        setSelectedQuote(data.quote);
+        setItems(data.items || []);
+      }
+    } catch (error) {
+      console.error('Error fetching quote detail:', error);
+    }
+  };
+
+  const fetchPricing = async () => {
+    try {
+      const response = await fetch(`/api/pricing-settings?projectId=${residence.id}`, { headers: { 'Authorization': `Bearer ${token}` } });
+      const data = await response.json();
+      if (data.success && data.setting) {
+        setPricing(data.setting);
+        setPricingForm({
+          first_hour_rate: data.setting.first_hour_rate,
+          extra_hour_rate: data.setting.extra_hour_rate,
+          tax_rate: data.setting.tax_rate,
+          currency: data.setting.currency || 'USD'
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching pricing:', error);
+    }
+  };
+
+  React.useEffect(() => {
+    if (token && residence?.id) {
+      fetchQuotes();
+      fetchPricing();
+    }
+  }, [token, residence?.id]);
+
+  React.useEffect(() => {
+    if (selectedQuote?.id) {
+      fetchQuoteDetail(selectedQuote.id);
+    }
+  }, [selectedQuote?.id]);
+
+  const savePricing = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch('/api/pricing-settings', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ ...pricingForm, project_id: residence.id, scope: 'project' })
+      });
+      const data = await response.json();
+      if (data.success) fetchPricing();
+      else alert(data.error || 'No se pudieron guardar las tarifas');
+    } catch (error) {
+      console.error('Error saving pricing:', error);
+    }
+  };
+
+  const addItem = async (e) => {
+    e.preventDefault();
+    if (!selectedQuote?.id) return;
+    try {
+      const response = await fetch(`/api/quotes/${selectedQuote.id}/items`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(newItem)
+      });
+      const data = await response.json();
+      if (data.success) {
+        setNewItem({ title_es: '', title_en: '', quantity: 1, unit: 'unit', unit_price: 0, item_type: 'service', taxable: true });
+        fetchQuoteDetail(selectedQuote.id);
+        fetchQuotes();
+      } else {
+        alert(data.error || 'No se pudo agregar la partida');
+      }
+    } catch (error) {
+      console.error('Error adding item:', error);
+    }
+  };
+
+  const formatMoney = (value) => new Intl.NumberFormat('en-US', { style: 'currency', currency: selectedQuote?.currency || pricingForm.currency || 'USD' }).format(Number(value || 0));
+
+  return (
+    <div className="space-y-8">
+      <div className="grid grid-cols-1 xl:grid-cols-[340px_minmax(0,1fr)] gap-6">
+        <div className="space-y-4">
+          <div className="bg-white border border-slate-200 rounded-2xl p-5">
+            <div className="text-xs uppercase tracking-[0.3em] text-slate-400 font-black mb-4">Project Quotes</div>
+            {loading ? <div className="text-slate-400">Cargando...</div> : quotes.length === 0 ? <div className="text-slate-500 text-sm">No hay cotizaciones en este proyecto.</div> : (
+              <div className="space-y-3">
+                {quotes.map(quote => (
+                  <button key={quote.id} onClick={() => fetchQuoteDetail(quote.id)} className={`w-full text-left border rounded-xl p-4 transition-colors ${selectedQuote?.id === quote.id ? 'border-slate-900 bg-slate-50' : 'border-slate-200 hover:border-slate-400'}`}>
+                    <div className="text-[10px] uppercase tracking-[0.25em] text-slate-400 font-bold">{quote.quote_number}</div>
+                    <div className="text-sm font-semibold text-slate-900 mt-2">{quote.title}</div>
+                    <div className="text-xs text-slate-500 mt-1">{quote.status}</div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {userRole === 'admin' && (
+            <form onSubmit={savePricing} className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4">
+              <div className="text-xs uppercase tracking-[0.3em] text-slate-400 font-black">Pricing Settings</div>
+              <input type="number" step="0.01" value={pricingForm.first_hour_rate} onChange={(e) => setPricingForm({ ...pricingForm, first_hour_rate: e.target.value })} className="w-full px-4 py-3 border border-slate-200 rounded-lg" placeholder="Primera hora" />
+              <input type="number" step="0.01" value={pricingForm.extra_hour_rate} onChange={(e) => setPricingForm({ ...pricingForm, extra_hour_rate: e.target.value })} className="w-full px-4 py-3 border border-slate-200 rounded-lg" placeholder="Hora extra" />
+              <input type="number" step="0.01" value={pricingForm.tax_rate} onChange={(e) => setPricingForm({ ...pricingForm, tax_rate: e.target.value })} className="w-full px-4 py-3 border border-slate-200 rounded-lg" placeholder="IVA" />
+              <button type="submit" className="w-full px-4 py-3 bg-slate-950 text-white rounded-lg text-xs uppercase tracking-[0.2em] font-black">Guardar tarifas</button>
+            </form>
+          )}
+        </div>
+
+        <div className="space-y-6">
+          {selectedQuote ? (
+            <>
+              <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4">
+                <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                  <div>
+                    <div className="text-xs uppercase tracking-[0.25em] text-slate-400 font-black mb-2">{selectedQuote.quote_number}</div>
+                    <h3 className="text-2xl font-bold text-slate-900">{selectedQuote.title}</h3>
+                    <p className="text-slate-500 mt-2">{selectedQuote.description || 'Sin descripción'}</p>
+                  </div>
+                  <div className="bg-slate-50 rounded-xl p-4 min-w-[220px]">
+                    <div className="text-xs uppercase tracking-[0.25em] text-slate-400 font-black">Totales</div>
+                    <div className="space-y-1 mt-3 text-sm">
+                      <div className="flex justify-between"><span>Subtotal</span><span>{formatMoney(selectedQuote.subtotal)}</span></div>
+                      <div className="flex justify-between"><span>IVA</span><span>{formatMoney(selectedQuote.tax_amount)}</span></div>
+                      <div className="flex justify-between font-bold text-slate-900 pt-2 border-t border-slate-200"><span>Total</span><span>{formatMoney(selectedQuote.total)}</span></div>
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div><div className="text-slate-400 text-xs uppercase tracking-[0.2em] font-bold">Cliente</div><div>{selectedQuote.client_name || 'Sin asignar'}</div></div>
+                  <div><div className="text-slate-400 text-xs uppercase tracking-[0.2em] font-bold">Email</div><div>{selectedQuote.client_email || '-'}</div></div>
+                  <div><div className="text-slate-400 text-xs uppercase tracking-[0.2em] font-bold">Idioma</div><div>{selectedQuote.language_default}</div></div>
+                  <div><div className="text-slate-400 text-xs uppercase tracking-[0.2em] font-bold">Link</div><div className="truncate">/quote/{selectedQuote.public_token}</div></div>
+                </div>
+              </div>
+
+              <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-6">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-lg font-bold text-slate-900">Partidas</h4>
+                  <span className="text-sm text-slate-500">{items.length} items</span>
+                </div>
+
+                {items.length === 0 ? <div className="text-slate-500 text-sm">No hay partidas todavía.</div> : (
+                  <div className="space-y-3">
+                    {items.map(item => (
+                      <div key={item.id} className="border border-slate-200 rounded-xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                        <div>
+                          <div className="text-sm font-semibold text-slate-900">{item.title_es}</div>
+                          <div className="text-xs text-slate-500">{item.description_es || item.item_type}</div>
+                        </div>
+                        <div className="text-sm text-slate-700">{item.quantity} × {formatMoney(item.unit_price)}</div>
+                        <div className="text-sm font-bold text-slate-900">{formatMoney(item.line_total)}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {userRole === 'admin' && (
+                  <form onSubmit={addItem} className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3 pt-4 border-t border-slate-100">
+                    <input value={newItem.title_es} onChange={(e) => setNewItem({ ...newItem, title_es: e.target.value })} placeholder="Título ES" className="px-4 py-3 border border-slate-200 rounded-lg xl:col-span-2" required />
+                    <input value={newItem.title_en} onChange={(e) => setNewItem({ ...newItem, title_en: e.target.value })} placeholder="Title EN" className="px-4 py-3 border border-slate-200 rounded-lg xl:col-span-2" />
+                    <select value={newItem.item_type} onChange={(e) => setNewItem({ ...newItem, item_type: e.target.value })} className="px-4 py-3 border border-slate-200 rounded-lg">
+                      <option value="service">Service</option>
+                      <option value="product">Product</option>
+                      <option value="accessory">Accessory</option>
+                      <option value="custom">Custom</option>
+                    </select>
+                    <input type="number" step="0.01" value={newItem.unit_price} onChange={(e) => setNewItem({ ...newItem, unit_price: e.target.value })} placeholder="Precio" className="px-4 py-3 border border-slate-200 rounded-lg" />
+                    <input type="number" step="0.01" value={newItem.quantity} onChange={(e) => setNewItem({ ...newItem, quantity: e.target.value })} placeholder="Qty" className="px-4 py-3 border border-slate-200 rounded-lg" />
+                    <input value={newItem.unit} onChange={(e) => setNewItem({ ...newItem, unit: e.target.value })} placeholder="Unidad" className="px-4 py-3 border border-slate-200 rounded-lg" />
+                    <label className="flex items-center gap-2 px-4 py-3 border border-slate-200 rounded-lg text-sm text-slate-700">
+                      <input type="checkbox" checked={newItem.taxable} onChange={(e) => setNewItem({ ...newItem, taxable: e.target.checked })} /> Gravable
+                    </label>
+                    <div className="md:col-span-2 xl:col-span-2 flex justify-end">
+                      <button type="submit" className="w-full xl:w-auto px-5 py-3 bg-slate-950 text-white rounded-lg text-xs uppercase tracking-[0.2em] font-black">Agregar partida</button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center text-slate-500">Selecciona una cotización para editarla.</div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ServiceHistoryTab = ({ residenceId, token }) => {
+  const [logs, setLogs] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const fetchLogs = async () => {
+      try {
+        const response = await fetch(`/api/service-history/project/${residenceId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        if (data.success) setLogs(data.logs || []);
+      } catch (error) {
+        console.error('Error fetching service history:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (residenceId && token) fetchLogs();
+  }, [residenceId, token]);
+
+  if (loading) return <div className="text-slate-400">Cargando service logs...</div>;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-xl font-bold text-slate-800">Service Log</h3>
+        <div className="text-sm text-slate-500">{logs.length} eventos</div>
+      </div>
+      {logs.length === 0 ? (
+        <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center text-slate-500">Todavía no hay eventos del módulo comercial en este proyecto.</div>
+      ) : (
+        <div className="space-y-3">
+          {logs.map(log => (
+            <div key={log.id} className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div>
+                <div className="text-xs uppercase tracking-[0.2em] text-slate-400 font-black">{log.event_type}</div>
+                <div className="text-sm text-slate-900 mt-2">{log.description}</div>
+                <div className="text-xs text-slate-500 mt-1">{log.quote_number ? `Quote ${log.quote_number}` : 'Sin quote'} {log.created_by_name ? `• por ${log.created_by_name}` : ''}</div>
+              </div>
+              <div className="text-xs text-slate-400">{new Date(log.created_at).toLocaleString('es-ES')}</div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
