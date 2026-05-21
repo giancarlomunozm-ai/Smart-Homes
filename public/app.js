@@ -383,6 +383,18 @@ const GlobalHeader = ({ currentView, currentResidence, onNavigate, onLogout, use
         <div className="flex gap-4 md:gap-10">
           {userRole === 'admin' && (
             <>
+              <select
+                value={['quotations', 'sales', 'clients', 'users'].includes(currentView) ? currentView : ''}
+                onChange={(e) => e.target.value && onNavigate(e.target.value)}
+                className="sm:hidden max-w-[142px] px-3 py-2 border border-slate-200 bg-white text-[10px] uppercase tracking-[0.18em] font-black text-slate-700 rounded-lg"
+                title="Menu admin"
+              >
+                <option value="">Menu</option>
+                <option value="quotations">Cotizaciones</option>
+                <option value="sales">Ventas</option>
+                <option value="clients">Clientes</option>
+                <option value="users">Usuarios</option>
+              </select>
               <button 
                 onClick={() => onNavigate('quotations')}
                 className={`hidden sm:block text-slate-400 hover:text-slate-950 transition-all hover:scale-125 ${currentView === 'quotations' ? 'text-slate-950 scale-125' : ''}`}
@@ -4031,6 +4043,21 @@ const QuotesTab = ({ residence, token, userRole }) => {
     }
   };
 
+  const quoteUrl = selectedQuote?.public_token ? `${window.location.origin}/quote/${selectedQuote.public_token}` : '';
+
+  const copyQuoteUrl = async () => {
+    if (!quoteUrl) return;
+    await navigator.clipboard?.writeText(quoteUrl);
+    alert('Liga copiada');
+  };
+
+  const sendQuoteByEmail = () => {
+    if (!quoteUrl) return;
+    const subject = encodeURIComponent(`Cotizacion ${selectedQuote.quote_number}`);
+    const body = encodeURIComponent(`Hola,\n\nTe comparto la cotizacion para revision:\n${quoteUrl}\n\nSaludos.`);
+    window.location.href = `mailto:${selectedQuote.client_email || ''}?subject=${subject}&body=${body}`;
+  };
+
   const formatMoney = (value) => new Intl.NumberFormat('en-US', { style: 'currency', currency: selectedQuote?.currency || pricingForm.currency || 'USD' }).format(Number(value || 0));
 
   return (
@@ -4052,15 +4079,12 @@ const QuotesTab = ({ residence, token, userRole }) => {
             )}
           </div>
 
-          {userRole === 'admin' && (
-            <form onSubmit={savePricing} className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4">
-              <div className="text-xs uppercase tracking-[0.3em] text-slate-400 font-black">Pricing Settings</div>
-              <input type="number" step="0.01" value={pricingForm.first_hour_rate} onChange={(e) => setPricingForm({ ...pricingForm, first_hour_rate: e.target.value })} className="w-full px-4 py-3 border border-slate-200 rounded-lg" placeholder="Primera hora" />
-              <input type="number" step="0.01" value={pricingForm.extra_hour_rate} onChange={(e) => setPricingForm({ ...pricingForm, extra_hour_rate: e.target.value })} className="w-full px-4 py-3 border border-slate-200 rounded-lg" placeholder="Hora extra" />
-              <input type="number" step="0.01" value={pricingForm.tax_rate} onChange={(e) => setPricingForm({ ...pricingForm, tax_rate: e.target.value })} className="w-full px-4 py-3 border border-slate-200 rounded-lg" placeholder="IVA" />
-              <button type="submit" className="w-full px-4 py-3 bg-slate-950 text-white rounded-lg text-xs uppercase tracking-[0.2em] font-black">Guardar tarifas</button>
-            </form>
-          )}
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-2">
+            <div className="text-xs uppercase tracking-[0.3em] text-slate-400 font-black">Tarifas del proyecto</div>
+            <div className="text-sm text-slate-700 flex justify-between"><span>Primera hora</span><span>{formatMoney(pricingForm.first_hour_rate)}</span></div>
+            <div className="text-sm text-slate-700 flex justify-between"><span>Hora adicional</span><span>{formatMoney(pricingForm.extra_hour_rate)}</span></div>
+            <div className="text-xs text-slate-400 pt-2">Se editan desde Info del proyecto.</div>
+          </div>
         </div>
 
         <div className="space-y-6">
@@ -4073,7 +4097,12 @@ const QuotesTab = ({ residence, token, userRole }) => {
                     <h3 className="text-2xl font-bold text-slate-900">{selectedQuote.title}</h3>
                     <p className="text-slate-500 mt-2">{selectedQuote.description || 'Sin descripción'}</p>
                     {selectedQuote.ticket_id && <p className="text-xs uppercase tracking-[0.2em] text-slate-400 font-bold mt-3">Ticket relacionado #{selectedQuote.ticket_id}</p>}
-                    {userRole === 'admin' && <button onClick={deleteSelectedQuote} className="mt-4 px-4 py-2 border border-red-100 text-red-600 rounded-lg text-xs uppercase tracking-[0.2em] font-black">Eliminar cotizacion</button>}
+                    <div className="flex flex-wrap gap-3 mt-4">
+                      {quoteUrl && <a href={quoteUrl} target="_blank" rel="noreferrer" className="px-4 py-2 bg-slate-950 text-white rounded-lg text-xs uppercase tracking-[0.2em] font-black">Ver liga cliente</a>}
+                      {quoteUrl && <button onClick={copyQuoteUrl} className="px-4 py-2 border border-slate-200 rounded-lg text-xs uppercase tracking-[0.2em] font-black">Copiar liga</button>}
+                      {quoteUrl && <button onClick={sendQuoteByEmail} className="px-4 py-2 border border-slate-200 rounded-lg text-xs uppercase tracking-[0.2em] font-black">Mandar por email</button>}
+                      {userRole === 'admin' && <button onClick={deleteSelectedQuote} className="px-4 py-2 border border-red-100 text-red-600 rounded-lg text-xs uppercase tracking-[0.2em] font-black">Eliminar cotizacion</button>}
+                    </div>
                   </div>
                   <div className="bg-slate-50 rounded-xl p-4 min-w-[220px]">
                     <div className="text-xs uppercase tracking-[0.25em] text-slate-400 font-black">Totales</div>
@@ -4088,7 +4117,7 @@ const QuotesTab = ({ residence, token, userRole }) => {
                   <div><div className="text-slate-400 text-xs uppercase tracking-[0.2em] font-bold">Cliente</div><div>{selectedQuote.client_name || 'Sin asignar'}</div></div>
                   <div><div className="text-slate-400 text-xs uppercase tracking-[0.2em] font-bold">Email</div><div>{selectedQuote.client_email || '-'}</div></div>
                   <div><div className="text-slate-400 text-xs uppercase tracking-[0.2em] font-bold">Idioma</div><div>{selectedQuote.language_default}</div></div>
-                  <div><div className="text-slate-400 text-xs uppercase tracking-[0.2em] font-bold">Link</div><div className="truncate">/quote/{selectedQuote.public_token}</div></div>
+                  <div><div className="text-slate-400 text-xs uppercase tracking-[0.2em] font-bold">Link</div><a href={quoteUrl} target="_blank" rel="noreferrer" className="block truncate text-slate-900 underline">{quoteUrl || '-'}</a></div>
                 </div>
               </div>
 
