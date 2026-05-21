@@ -359,6 +359,21 @@ quotes.put('/:id', async (c) => {
       UPDATE sales_records SET expected_value = ?, updated_at = CURRENT_TIMESTAMP WHERE quote_id = ?
     `).bind(totals.total, quoteId).run();
 
+    if (status) {
+      if (status === 'paid') {
+        await db.prepare('UPDATE quotes SET paid_at = COALESCE(paid_at, CURRENT_TIMESTAMP) WHERE id = ?').bind(quoteId).run();
+        await db.prepare(`
+          UPDATE sales_records SET stage = 'paid', expected_value = ?, closed_value = ?, updated_at = CURRENT_TIMESTAMP WHERE quote_id = ?
+        `).bind(totals.total, totals.total, quoteId).run();
+      } else if (status === 'signed') {
+        await db.prepare("UPDATE sales_records SET stage = 'signed', expected_value = ?, updated_at = CURRENT_TIMESTAMP WHERE quote_id = ?").bind(totals.total, quoteId).run();
+      } else if (status === 'cancelled' || status === 'expired') {
+        await db.prepare("UPDATE sales_records SET stage = 'lost', updated_at = CURRENT_TIMESTAMP WHERE quote_id = ?").bind(quoteId).run();
+      } else {
+        await db.prepare("UPDATE sales_records SET stage = 'quoted', expected_value = ?, updated_at = CURRENT_TIMESTAMP WHERE quote_id = ?").bind(totals.total, quoteId).run();
+      }
+    }
+
     await logServiceEvent(db, existing.project_id as string, quoteId, 'quote_updated', `Cotización ${existing.quote_number} actualizada`, user.userId, { status: status || existing.status });
 
     return c.json({ success: true, message: 'Cotización actualizada', totals });

@@ -39,10 +39,15 @@ support.get('/residence/:residenceId', async (c) => {
         t.*,
         u.name as user_name,
         u.email as user_email,
-        a.name as assigned_name
+        a.name as assigned_name,
+        q.id as quote_id,
+        q.quote_number,
+        q.status as quote_status,
+        q.total as quote_total
       FROM support_tickets t
       LEFT JOIN users u ON t.user_id = u.id
       LEFT JOIN users a ON t.assigned_to = a.id
+      LEFT JOIN quotes q ON q.ticket_id = t.id
       WHERE t.residence_id = ?
       ORDER BY 
         CASE t.status 
@@ -77,10 +82,15 @@ support.get('/:ticketId', async (c) => {
         t.*,
         u.name as user_name,
         u.email as user_email,
-        a.name as assigned_name
+        a.name as assigned_name,
+        q.id as quote_id,
+        q.quote_number,
+        q.status as quote_status,
+        q.total as quote_total
       FROM support_tickets t
       LEFT JOIN users u ON t.user_id = u.id
       LEFT JOIN users a ON t.assigned_to = a.id
+      LEFT JOIN quotes q ON q.ticket_id = t.id
       WHERE t.id = ?
     `).bind(ticketId).first();
 
@@ -178,6 +188,49 @@ support.post('/', async (c) => {
   } catch (error) {
     console.error('Create ticket error:', error);
     return c.json({ error: 'Error al crear ticket' }, 500);
+  }
+});
+
+support.put('/:ticketId', async (c) => {
+  try {
+    const user = c.get('user');
+    const ticketId = c.req.param('ticketId');
+    const body = await c.req.json();
+    const db = c.env.DB;
+
+    const ticket = await db.prepare('SELECT * FROM support_tickets WHERE id = ?').bind(ticketId).first();
+    if (!ticket) {
+      return c.json({ error: 'Ticket no encontrado' }, 404);
+    }
+
+    if (user.role !== 'admin') {
+      return c.json({ error: 'Solo administradores pueden editar tickets' }, 403);
+    }
+
+    await db.prepare(`
+      UPDATE support_tickets SET
+        title = ?,
+        description = ?,
+        priority = ?,
+        category = ?,
+        status = ?,
+        updated_at = CURRENT_TIMESTAMP,
+        resolved_at = CASE WHEN ? IN ('resolved', 'closed') THEN COALESCE(resolved_at, CURRENT_TIMESTAMP) ELSE resolved_at END
+      WHERE id = ?
+    `).bind(
+      body.title ?? ticket.title,
+      body.description ?? ticket.description,
+      body.priority ?? ticket.priority,
+      body.category ?? ticket.category,
+      body.status ?? ticket.status,
+      body.status ?? ticket.status,
+      ticketId
+    ).run();
+
+    return c.json({ success: true, message: 'Ticket actualizado' });
+  } catch (error) {
+    console.error('Update ticket error:', error);
+    return c.json({ error: 'Error al actualizar ticket' }, 500);
   }
 });
 

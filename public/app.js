@@ -350,6 +350,18 @@ const Icon = ({ name, size = 16, className = '' }) => {
 
 // Header Global
 const GlobalHeader = ({ currentView, currentResidence, onNavigate, onLogout, userRole }) => {
+  const [adminMenuOpen, setAdminMenuOpen] = React.useState(false);
+  const adminNavItems = [
+    { id: 'quotations', label: 'Cotizaciones', icon: 'FileText' },
+    { id: 'sales', label: 'Ventas', icon: 'Activity' },
+    { id: 'clients', label: 'Clientes', icon: 'Users' },
+    { id: 'users', label: 'Usuarios', icon: 'Users' }
+  ];
+  const handleAdminNavigate = (viewId) => {
+    setAdminMenuOpen(false);
+    onNavigate(viewId);
+  };
+
   return (
     <header className="fixed top-0 left-0 right-0 h-20 md:h-28 bg-[#F9F9F9]/85 backdrop-blur-3xl z-40 px-5 sm:px-8 md:px-20 flex items-center justify-between border-b border-slate-200/40">
       <div 
@@ -383,18 +395,30 @@ const GlobalHeader = ({ currentView, currentResidence, onNavigate, onLogout, use
         <div className="flex gap-4 md:gap-10">
           {userRole === 'admin' && (
             <>
-              <select
-                value={['quotations', 'sales', 'clients', 'users'].includes(currentView) ? currentView : ''}
-                onChange={(e) => e.target.value && onNavigate(e.target.value)}
-                className="sm:hidden max-w-[142px] px-3 py-2 border border-slate-200 bg-white text-[10px] uppercase tracking-[0.18em] font-black text-slate-700 rounded-lg"
-                title="Menu admin"
-              >
-                <option value="">Menu</option>
-                <option value="quotations">Cotizaciones</option>
-                <option value="sales">Ventas</option>
-                <option value="clients">Clientes</option>
-                <option value="users">Usuarios</option>
-              </select>
+              <div className="relative sm:hidden">
+                <button
+                  onClick={() => setAdminMenuOpen(!adminMenuOpen)}
+                  className="h-10 w-10 border border-slate-200 bg-white text-slate-950 flex items-center justify-center hover:border-slate-950 transition-colors"
+                  title="Menu admin"
+                >
+                  <Icon name="Settings" size={18} />
+                </button>
+                {adminMenuOpen && (
+                  <div className="absolute right-0 top-12 z-50 w-64 bg-white border border-slate-200 shadow-2xl p-2">
+                    <div className="px-3 py-2 text-[9px] uppercase tracking-[0.35em] text-slate-400 font-black">Admin</div>
+                    {adminNavItems.map(item => (
+                      <button
+                        key={item.id}
+                        onClick={() => handleAdminNavigate(item.id)}
+                        className={`w-full flex items-center justify-between px-3 py-3 text-left text-[11px] uppercase tracking-[0.25em] font-black transition-colors ${currentView === item.id ? 'bg-slate-950 text-white' : 'text-slate-700 hover:bg-slate-50'}`}
+                      >
+                        <span>{item.label}</span>
+                        <Icon name={item.icon} size={15} />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <button 
                 onClick={() => onNavigate('quotations')}
                 className={`hidden sm:block text-slate-400 hover:text-slate-950 transition-all hover:scale-125 ${currentView === 'quotations' ? 'text-slate-950 scale-125' : ''}`}
@@ -2364,6 +2388,9 @@ const HistoryTab = ({ residenceId, token }) => {
 // ==================== SUPPORT TAB COMPONENT ====================
 const SupportTab = ({ residenceId, token, userRole }) => {
   const [tickets, setTickets] = React.useState([]);
+  const [quotes, setQuotes] = React.useState([]);
+  const [selectedTicket, setSelectedTicket] = React.useState(null);
+  const [ticketForm, setTicketForm] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
   const [showNewTicket, setShowNewTicket] = React.useState(false);
   const [newTicket, setNewTicket] = React.useState({
@@ -2375,6 +2402,7 @@ const SupportTab = ({ residenceId, token, userRole }) => {
 
   React.useEffect(() => {
     fetchTickets();
+    fetchQuotes();
   }, [residenceId, token]);
 
   const fetchTickets = async () => {
@@ -2419,6 +2447,75 @@ const SupportTab = ({ residenceId, token, userRole }) => {
     } catch (error) {
       console.error('Error creating ticket:', error);
       alert('Error al crear ticket: ' + error.message);
+    }
+  };
+
+  const fetchQuotes = async () => {
+    try {
+      const response = await fetch(`/api/quotes/project/${residenceId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (data.success) setQuotes(data.quotes || []);
+    } catch (error) {
+      console.error('Error fetching support quotes:', error);
+    }
+  };
+
+  const openTicket = (ticket) => {
+    setSelectedTicket(ticket);
+    setTicketForm({
+      title: ticket.title || '',
+      description: ticket.description || '',
+      priority: ticket.priority || 'medium',
+      category: ticket.category || 'General',
+      status: ticket.status || 'open',
+      quote_id: ticket.quote_id || ''
+    });
+  };
+
+  const saveTicket = async (e) => {
+    e.preventDefault();
+    if (!selectedTicket || !ticketForm) return;
+    try {
+      const response = await fetch(`/api/support/${selectedTicket.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(ticketForm)
+      });
+      const data = await response.json();
+      if (!data.success) {
+        alert(data.error || 'No se pudo actualizar el ticket');
+        return;
+      }
+
+      const quoteId = ticketForm.quote_id ? Number(ticketForm.quote_id) : null;
+      const currentlyLinked = quotes.find(q => Number(q.ticket_id) === Number(selectedTicket.id));
+      if (currentlyLinked && currentlyLinked.id !== quoteId) {
+        await fetch(`/api/quotes/${currentlyLinked.id}`, {
+          method: 'PUT',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ticket_id: null })
+        });
+      }
+      if (quoteId) {
+        await fetch(`/api/quotes/${quoteId}`, {
+          method: 'PUT',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ticket_id: selectedTicket.id })
+        });
+      }
+
+      await fetchTickets();
+      await fetchQuotes();
+      setSelectedTicket(null);
+      setTicketForm(null);
+    } catch (error) {
+      console.error('Error saving ticket:', error);
+      alert('Error al guardar ticket');
     }
   };
 
@@ -2560,7 +2657,7 @@ const SupportTab = ({ residenceId, token, userRole }) => {
         <div className="space-y-3">
           {tickets.map((ticket) => (
             <div key={ticket.id} className="bg-white rounded-lg border border-slate-200 p-4 hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between">
+              <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
                   <div className="flex items-center space-x-2 mb-2">
                     <span className="text-lg">{getStatusIcon(ticket.status)}</span>
@@ -2577,6 +2674,11 @@ const SupportTab = ({ residenceId, token, userRole }) => {
                     <span className="px-2 py-1 text-xs bg-slate-100 text-slate-700 rounded">
                       {ticket.category}
                     </span>
+                    {ticket.quote_number && (
+                      <span className="px-2 py-1 text-xs bg-green-50 text-green-700 rounded">
+                        Quote {ticket.quote_number} / {ticket.quote_status}
+                      </span>
+                    )}
                     <span className="text-xs text-slate-500">
                       • Ticket #{ticket.id}
                     </span>
@@ -2585,9 +2687,60 @@ const SupportTab = ({ residenceId, token, userRole }) => {
                     </span>
                   </div>
                 </div>
+                {userRole === 'admin' && (
+                  <button onClick={() => openTicket(ticket)} className="shrink-0 px-3 py-2 border border-slate-200 rounded-lg text-xs uppercase tracking-[0.2em] font-black text-slate-700 hover:border-slate-950">
+                    Editar
+                  </button>
+                )}
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {userRole === 'admin' && selectedTicket && ticketForm && (
+        <div className="fixed inset-0 z-50 bg-slate-950/40 flex items-end sm:items-center justify-center p-4">
+          <form onSubmit={saveTicket} className="bg-white border border-slate-200 shadow-2xl w-full max-w-2xl max-h-[88vh] overflow-y-auto p-6 space-y-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="text-[10px] uppercase tracking-[0.35em] text-slate-400 font-black">Ticket #{selectedTicket.id}</div>
+                <h4 className="text-2xl font-bold text-slate-900 mt-2">Editar ticket</h4>
+              </div>
+              <button type="button" onClick={() => setSelectedTicket(null)} className="text-slate-400 hover:text-slate-900">
+                <Icon name="X" size={22} />
+              </button>
+            </div>
+
+            <input value={ticketForm.title} onChange={(e) => setTicketForm({ ...ticketForm, title: e.target.value })} className="w-full px-4 py-3 border border-slate-200 rounded-lg" placeholder="Titulo" required />
+            <textarea value={ticketForm.description} onChange={(e) => setTicketForm({ ...ticketForm, description: e.target.value })} className="w-full px-4 py-3 border border-slate-200 rounded-lg min-h-[110px]" placeholder="Descripcion" required />
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <select value={ticketForm.status} onChange={(e) => setTicketForm({ ...ticketForm, status: e.target.value })} className="px-4 py-3 border border-slate-200 rounded-lg">
+                <option value="open">Open</option>
+                <option value="in_progress">In progress</option>
+                <option value="resolved">Resolved</option>
+                <option value="closed">Closed</option>
+              </select>
+              <select value={ticketForm.priority} onChange={(e) => setTicketForm({ ...ticketForm, priority: e.target.value })} className="px-4 py-3 border border-slate-200 rounded-lg">
+                <option value="low">Baja</option>
+                <option value="medium">Media</option>
+                <option value="high">Alta</option>
+                <option value="urgent">Urgente</option>
+              </select>
+              <input value={ticketForm.category} onChange={(e) => setTicketForm({ ...ticketForm, category: e.target.value })} className="px-4 py-3 border border-slate-200 rounded-lg" placeholder="Categoria" />
+              <select value={ticketForm.quote_id || ''} onChange={(e) => setTicketForm({ ...ticketForm, quote_id: e.target.value })} className="px-4 py-3 border border-slate-200 rounded-lg">
+                <option value="">Sin cotizacion relacionada</option>
+                {quotes.map(quote => (
+                  <option key={quote.id} value={quote.id}>{quote.quote_number} / {quote.status} / {quote.title}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button type="button" onClick={() => setSelectedTicket(null)} className="px-5 py-3 border border-slate-200 rounded-lg text-xs uppercase tracking-[0.2em] font-black">Cancelar</button>
+              <button type="submit" className="px-5 py-3 bg-slate-950 text-white rounded-lg text-xs uppercase tracking-[0.2em] font-black">Guardar</button>
+            </div>
+          </form>
         </div>
       )}
     </div>
@@ -3374,6 +3527,7 @@ const ArrivalCheckTab = ({ residenceId, token, userRole }) => {
   const [loading, setLoading] = React.useState(true);
   const [groupedItems, setGroupedItems] = React.useState({});
   const [expandedRooms, setExpandedRooms] = React.useState({});
+  const [checkForm, setCheckForm] = React.useState({ status: 'pending', notes: '' });
 
   React.useEffect(() => {
     fetchArrivalCheck();
@@ -3392,6 +3546,7 @@ const ArrivalCheckTab = ({ residenceId, token, userRole }) => {
         
         if (check) {
           setArrivalCheck(check);
+          setCheckForm({ status: check.status || 'pending', notes: check.notes || '' });
           
           // Obtener items del checklist
           const itemsResponse = await fetch(`/api/arrival-checks/${check.id}/items`, {
@@ -3442,13 +3597,39 @@ const ArrivalCheckTab = ({ residenceId, token, userRole }) => {
       });
 
       if (response.ok) {
-        // Actualizar estado local
-        setItems(items.map(i => 
-          i.id === itemId ? { ...i, [field]: value } : i
-        ));
+        const nextItems = items.map(i => i.id === itemId ? { ...i, [field]: value ? 1 : 0 } : i);
+        setItems(nextItems);
+        setGroupedItems(nextItems.reduce((acc, nextItem) => {
+          if (!acc[nextItem.room]) acc[nextItem.room] = [];
+          acc[nextItem.room].push(nextItem);
+          return acc;
+        }, {}));
       }
     } catch (error) {
       console.error('Error updating item:', error);
+    }
+  };
+
+  const saveArrivalCheck = async (e) => {
+    e.preventDefault();
+    if (!arrivalCheck) return;
+    try {
+      const response = await fetch(`/api/arrival-checks/${arrivalCheck.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(checkForm)
+      });
+      const data = await response.json();
+      if (data.success) {
+        setArrivalCheck(prev => ({ ...prev, ...checkForm }));
+      } else {
+        alert(data.error || 'No se pudo actualizar Arrival Check');
+      }
+    } catch (error) {
+      console.error('Error saving arrival check:', error);
     }
   };
 
@@ -3478,7 +3659,7 @@ const ArrivalCheckTab = ({ residenceId, token, userRole }) => {
       <div className="bg-white rounded-lg border border-slate-200 p-8 text-center">
         <div className="text-6xl mb-4">📋</div>
         <h3 className="text-xl font-bold text-slate-800 mb-2">No hay Arrival Check programado</h3>
-        <p className="text-slate-600">Esta residencia no tiene un Arrival Check activo.</p>
+        <p className="text-slate-600">Esta residencia no tiene un Arrival Check activo o todavia no hay inventario cargado para generarlo.</p>
       </div>
     );
   }
@@ -3518,10 +3699,28 @@ const ArrivalCheckTab = ({ residenceId, token, userRole }) => {
             style={{ width: `${progress.percentage}%` }}
           />
         </div>
+
+        {userRole === 'admin' && (
+          <form onSubmit={saveArrivalCheck} className="grid grid-cols-1 md:grid-cols-[220px_minmax(0,1fr)_auto] gap-3 mt-5 pt-5 border-t border-slate-100">
+            <select value={checkForm.status} onChange={(e) => setCheckForm({ ...checkForm, status: e.target.value })} className="px-4 py-3 border border-slate-200 rounded-lg">
+              <option value="pending">Pendiente</option>
+              <option value="in_progress">En progreso</option>
+              <option value="completed">Completado</option>
+              <option value="cancelled">Cancelado</option>
+            </select>
+            <input value={checkForm.notes} onChange={(e) => setCheckForm({ ...checkForm, notes: e.target.value })} className="px-4 py-3 border border-slate-200 rounded-lg" placeholder="Notas del arrival check" />
+            <button type="submit" className="px-5 py-3 bg-slate-950 text-white rounded-lg text-xs uppercase tracking-[0.2em] font-black">Guardar</button>
+          </form>
+        )}
       </div>
 
       {/* Checklist por rooms */}
       <div className="space-y-4">
+        {Object.keys(groupedItems).length === 0 && (
+          <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center text-slate-500">
+            No hay items de checklist. Esto normalmente pasa cuando no hay inventario/dispositivos cargados para esta casa.
+          </div>
+        )}
         {Object.entries(groupedItems).map(([room, roomItems]) => {
           const roomProgress = {
             total: roomItems.length,
@@ -3712,6 +3911,16 @@ const QuotationsDashboard = ({ token, residences, userRole, onOpenProject }) => 
     }
   };
 
+  const copyQuotePublicLink = async (quote) => {
+    const url = `${window.location.origin}/quote/${quote.public_token}`;
+    try {
+      await navigator.clipboard?.writeText(url);
+      alert('Liga copiada');
+    } catch (error) {
+      window.prompt('Copia la liga de la cotizacion:', url);
+    }
+  };
+
   const formatMoney = (value) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(value || 0));
 
   return (
@@ -3779,7 +3988,7 @@ const QuotationsDashboard = ({ token, residences, userRole, onOpenProject }) => 
               </div>
               <div className="flex flex-col md:flex-row gap-3">
                 <button onClick={() => onOpenProject(quote.project_id)} className="px-4 py-3 border border-slate-200 rounded-lg text-sm font-medium hover:border-slate-400 transition-colors">Abrir proyecto</button>
-                <button className="px-4 py-3 border border-slate-200 rounded-lg text-sm font-medium hover:border-slate-400 transition-colors" onClick={() => navigator.clipboard?.writeText(`${window.location.origin}/quote/${quote.public_token}`)}>Copiar link público</button>
+                {userRole === 'admin' && <button className="px-4 py-3 border border-slate-200 rounded-lg text-sm font-medium hover:border-slate-400 transition-colors" onClick={() => copyQuotePublicLink(quote)}>Copiar link público</button>}
                 {userRole === 'admin' && <button onClick={() => deleteQuote(quote)} className="px-4 py-3 border border-red-100 text-red-600 rounded-lg text-sm font-medium hover:border-red-300 transition-colors">Eliminar</button>}
               </div>
             </div>
@@ -4047,15 +4256,35 @@ const QuotesTab = ({ residence, token, userRole }) => {
 
   const copyQuoteUrl = async () => {
     if (!quoteUrl) return;
-    await navigator.clipboard?.writeText(quoteUrl);
-    alert('Liga copiada');
+    try {
+      await navigator.clipboard?.writeText(quoteUrl);
+      alert('Liga copiada');
+    } catch (error) {
+      window.prompt('Copia la liga de la cotizacion:', quoteUrl);
+    }
   };
 
-  const sendQuoteByEmail = () => {
-    if (!quoteUrl) return;
-    const subject = encodeURIComponent(`Cotizacion ${selectedQuote.quote_number}`);
-    const body = encodeURIComponent(`Hola,\n\nTe comparto la cotizacion para revision:\n${quoteUrl}\n\nSaludos.`);
-    window.location.href = `mailto:${selectedQuote.client_email || ''}?subject=${subject}&body=${body}`;
+  const updateQuoteStatus = async (status) => {
+    if (!selectedQuote?.id) return;
+    try {
+      const response = await fetch(`/api/quotes/${selectedQuote.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status })
+      });
+      const data = await response.json();
+      if (data.success) {
+        await fetchQuoteDetail(selectedQuote.id);
+        fetchQuotes();
+      } else {
+        alert(data.error || 'No se pudo actualizar el estatus');
+      }
+    } catch (error) {
+      console.error('Error updating quote status:', error);
+    }
   };
 
   const formatMoney = (value) => new Intl.NumberFormat('en-US', { style: 'currency', currency: selectedQuote?.currency || pricingForm.currency || 'USD' }).format(Number(value || 0));
@@ -4097,12 +4326,22 @@ const QuotesTab = ({ residence, token, userRole }) => {
                     <h3 className="text-2xl font-bold text-slate-900">{selectedQuote.title}</h3>
                     <p className="text-slate-500 mt-2">{selectedQuote.description || 'Sin descripción'}</p>
                     {selectedQuote.ticket_id && <p className="text-xs uppercase tracking-[0.2em] text-slate-400 font-bold mt-3">Ticket relacionado #{selectedQuote.ticket_id}</p>}
-                    <div className="flex flex-wrap gap-3 mt-4">
-                      {quoteUrl && <a href={quoteUrl} target="_blank" rel="noreferrer" className="px-4 py-2 bg-slate-950 text-white rounded-lg text-xs uppercase tracking-[0.2em] font-black">Ver liga cliente</a>}
-                      {quoteUrl && <button onClick={copyQuoteUrl} className="px-4 py-2 border border-slate-200 rounded-lg text-xs uppercase tracking-[0.2em] font-black">Copiar liga</button>}
-                      {quoteUrl && <button onClick={sendQuoteByEmail} className="px-4 py-2 border border-slate-200 rounded-lg text-xs uppercase tracking-[0.2em] font-black">Mandar por email</button>}
-                      {userRole === 'admin' && <button onClick={deleteSelectedQuote} className="px-4 py-2 border border-red-100 text-red-600 rounded-lg text-xs uppercase tracking-[0.2em] font-black">Eliminar cotizacion</button>}
-                    </div>
+                    {userRole === 'admin' && (
+                      <div className="flex flex-wrap gap-3 mt-4">
+                        {quoteUrl && <a href={quoteUrl} target="_blank" rel="noreferrer" className="px-4 py-2 bg-slate-950 text-white rounded-lg text-xs uppercase tracking-[0.2em] font-black">Ver liga cliente</a>}
+                        {quoteUrl && <button onClick={copyQuoteUrl} className="px-4 py-2 border border-slate-200 rounded-lg text-xs uppercase tracking-[0.2em] font-black">Copiar liga</button>}
+                        <select value={selectedQuote.status || 'draft'} onChange={(e) => updateQuoteStatus(e.target.value)} className="px-4 py-2 border border-slate-200 rounded-lg text-xs uppercase tracking-[0.18em] font-black bg-white">
+                          <option value="draft">Draft</option>
+                          <option value="sent">Sent</option>
+                          <option value="viewed">Viewed</option>
+                          <option value="signed">Signed</option>
+                          <option value="paid">Paid</option>
+                          <option value="cancelled">Cancelled</option>
+                        </select>
+                        {selectedQuote.status !== 'paid' && <button onClick={() => updateQuoteStatus('paid')} className="px-4 py-2 bg-green-600 text-white rounded-lg text-xs uppercase tracking-[0.2em] font-black">Marcar pagada</button>}
+                        <button onClick={deleteSelectedQuote} className="px-4 py-2 border border-red-100 text-red-600 rounded-lg text-xs uppercase tracking-[0.2em] font-black">Eliminar cotizacion</button>
+                      </div>
+                    )}
                   </div>
                   <div className="bg-slate-50 rounded-xl p-4 min-w-[220px]">
                     <div className="text-xs uppercase tracking-[0.25em] text-slate-400 font-black">Totales</div>
