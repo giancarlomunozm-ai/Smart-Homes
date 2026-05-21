@@ -398,6 +398,13 @@ const GlobalHeader = ({ currentView, currentResidence, onNavigate, onLogout, use
                 <span className="text-lg">📈</span>
               </button>
               <button 
+                onClick={() => onNavigate('clients')}
+                className={`hidden sm:block text-slate-400 hover:text-slate-950 transition-all hover:scale-125 ${currentView === 'clients' ? 'text-slate-950 scale-125' : ''}`}
+                title="Clientes"
+              >
+                <Icon name="Users" size={20} />
+              </button>
+              <button 
                 onClick={() => onNavigate('users')}
                 className={`hidden sm:block text-slate-400 hover:text-slate-950 transition-all hover:scale-125 ${currentView === 'users' ? 'text-slate-950 scale-125' : ''}`}
                 title="Gestión de Usuarios"
@@ -549,6 +556,7 @@ const ResidenceHeader = ({ residence, activeTab, onTabChange, onBack }) => {
 
         <nav className="-mx-5 px-5 sm:mx-0 sm:px-0 flex gap-2 sm:gap-4 lg:gap-10 border-b border-slate-200/60 w-auto sm:w-full overflow-x-auto overscroll-x-contain pb-2 sm:pb-0 [scrollbar-width:none]">
           {[
+            { id: 'project-settings', label: 'Info', icon: 'Settings' },
             { id: 'systems', label: '🏠 Sistemas', icon: 'Home' },
             { id: 'quotes', label: '💼 Cotizaciones', icon: 'FileText' },
             { id: 'arrival-check', label: '✅ Arrival Check', icon: 'CheckSquare' },
@@ -2018,6 +2026,10 @@ const App = () => {
       return <UserManagement token={token} userRole={user?.role} />;
     }
 
+    if (view === 'clients') {
+      return <ClientsDashboard token={token} userRole={user?.role} />;
+    }
+
     if (view === 'quotations') {
       return <QuotationsDashboard token={token} residences={residences} userRole={user?.role} onOpenProject={(projectId) => {
         const found = residences.find(r => r.id === projectId);
@@ -2104,6 +2116,14 @@ const App = () => {
 
       if (activeTab === 'quotes') {
         return <QuotesTab residence={currentResidence} token={token} userRole={user?.role} />;
+      }
+
+      if (activeTab === 'project-settings') {
+        return <ProjectSettingsTab residence={residenceDetails || currentResidence} token={token} userRole={user?.role} onSaved={(updated) => {
+          setCurrentResidence(updated);
+          loadResidences();
+          loadResidenceDetails(updated.id);
+        }} />;
       }
 
       if (activeTab === 'history') {
@@ -2559,6 +2579,297 @@ const SupportTab = ({ residenceId, token, userRole }) => {
         </div>
       )}
     </div>
+  );
+};
+
+const emptyClientForm = {
+  display_name: '',
+  first_name: '',
+  last_name: '',
+  company_name: '',
+  email: '',
+  phone: '',
+  billing_email: '',
+  billing_phone: '',
+  preferred_language: 'es',
+  notes: ''
+};
+
+const ClientsDashboard = ({ token, userRole }) => {
+  const [clients, setClients] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [showForm, setShowForm] = React.useState(false);
+  const [editing, setEditing] = React.useState(null);
+  const [form, setForm] = React.useState(emptyClientForm);
+
+  const fetchClients = async () => {
+    try {
+      const response = await fetch('/api/clients', { headers: { 'Authorization': `Bearer ${token}` } });
+      const data = await response.json();
+      if (data.success) setClients(data.clients || []);
+    } catch (error) {
+      console.error('Error fetching clients:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    if (token && userRole === 'admin') fetchClients();
+  }, [token, userRole]);
+
+  const resetForm = () => {
+    setEditing(null);
+    setForm(emptyClientForm);
+    setShowForm(false);
+  };
+
+  const saveClient = async (e) => {
+    e.preventDefault();
+    const payload = { ...form, display_name: form.display_name || `${form.first_name} ${form.last_name}`.trim() || form.company_name };
+    try {
+      const response = await fetch(editing ? `/api/clients/${editing}` : '/api/clients', {
+        method: editing ? 'PUT' : 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+      const data = await response.json();
+      if (data.success) {
+        resetForm();
+        fetchClients();
+      } else {
+        alert(data.error || 'No se pudo guardar el cliente');
+      }
+    } catch (error) {
+      console.error('Error saving client:', error);
+      alert('Error al guardar cliente');
+    }
+  };
+
+  const editClient = (client) => {
+    setEditing(client.id);
+    setForm({
+      display_name: client.display_name || '',
+      first_name: client.first_name || '',
+      last_name: client.last_name || '',
+      company_name: client.company_name || '',
+      email: client.email || '',
+      phone: client.phone || '',
+      billing_email: client.billing_email || '',
+      billing_phone: client.billing_phone || '',
+      preferred_language: client.preferred_language || 'es',
+      notes: client.notes || ''
+    });
+    setShowForm(true);
+  };
+
+  const deleteClient = async (client) => {
+    if (!confirm(`Eliminar cliente ${client.display_name}?`)) return;
+    try {
+      const response = await fetch(`/api/clients/${client.id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (data.success) fetchClients();
+      else alert(data.error || 'No se pudo eliminar el cliente');
+    } catch (error) {
+      console.error('Error deleting client:', error);
+    }
+  };
+
+  if (userRole !== 'admin') return <div className="py-20 text-center text-slate-400">Acceso restringido.</div>;
+
+  return (
+    <div className="space-y-8">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.6em] text-slate-400 font-black mb-2">CRM</p>
+          <h2 className="text-4xl md:text-5xl font-light tracking-tight text-slate-950">Clientes</h2>
+        </div>
+        <button onClick={() => setShowForm(!showForm)} className="px-5 py-3 bg-slate-950 text-white text-xs uppercase tracking-[0.3em] font-black rounded-lg">
+          {showForm ? 'Cerrar' : 'Nuevo cliente'}
+        </button>
+      </div>
+
+      {showForm && (
+        <form onSubmit={saveClient} className="bg-white border border-slate-200 rounded-2xl p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <input value={form.display_name} onChange={(e) => setForm({ ...form, display_name: e.target.value })} placeholder="Nombre visible" className="px-4 py-3 border border-slate-200 rounded-lg" required />
+          <input value={form.company_name} onChange={(e) => setForm({ ...form, company_name: e.target.value })} placeholder="Empresa" className="px-4 py-3 border border-slate-200 rounded-lg" />
+          <input value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} placeholder="Nombre" className="px-4 py-3 border border-slate-200 rounded-lg" />
+          <input value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} placeholder="Apellido" className="px-4 py-3 border border-slate-200 rounded-lg" />
+          <input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="Email principal" className="px-4 py-3 border border-slate-200 rounded-lg" />
+          <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="Telefono principal" className="px-4 py-3 border border-slate-200 rounded-lg" />
+          <input value={form.billing_email} onChange={(e) => setForm({ ...form, billing_email: e.target.value })} placeholder="Email facturacion" className="px-4 py-3 border border-slate-200 rounded-lg" />
+          <input value={form.billing_phone} onChange={(e) => setForm({ ...form, billing_phone: e.target.value })} placeholder="Telefono facturacion" className="px-4 py-3 border border-slate-200 rounded-lg" />
+          <select value={form.preferred_language} onChange={(e) => setForm({ ...form, preferred_language: e.target.value })} className="px-4 py-3 border border-slate-200 rounded-lg">
+            <option value="es">Espanol</option>
+            <option value="en">English</option>
+          </select>
+          <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Notas" className="px-4 py-3 border border-slate-200 rounded-lg md:col-span-2 min-h-[90px]" />
+          <div className="md:col-span-2 flex justify-end gap-3">
+            <button type="button" onClick={resetForm} className="px-5 py-3 border border-slate-200 rounded-lg text-xs uppercase tracking-[0.2em] font-black">Cancelar</button>
+            <button type="submit" className="px-5 py-3 bg-slate-950 text-white rounded-lg text-xs uppercase tracking-[0.2em] font-black">Guardar</button>
+          </div>
+        </form>
+      )}
+
+      {loading ? <div className="text-slate-400">Cargando clientes...</div> : (
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+          {clients.map(client => (
+            <div key={client.id} className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900">{client.display_name}</h3>
+                  <p className="text-sm text-slate-500">{client.company_name || client.email || 'Sin empresa'}</p>
+                </div>
+                <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-xs uppercase tracking-[0.18em] font-bold">{client.project_count || 0} proyectos</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-slate-700">
+                <div>{client.email || '-'}</div>
+                <div>{client.phone || '-'}</div>
+                <div className="md:col-span-2 text-slate-500">{client.project_names || 'Sin proyectos ligados'}</div>
+              </div>
+              <div className="flex gap-3">
+                <button onClick={() => editClient(client)} className="px-4 py-3 border border-slate-200 rounded-lg text-sm font-medium">Editar</button>
+                <button onClick={() => deleteClient(client)} className="px-4 py-3 border border-red-100 text-red-600 rounded-lg text-sm font-medium">Eliminar</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const ProjectSettingsTab = ({ residence, token, userRole, onSaved }) => {
+  const [details, setDetails] = React.useState(residence || {});
+  const [clients, setClients] = React.useState([]);
+  const [selectedClient, setSelectedClient] = React.useState('');
+  const [saving, setSaving] = React.useState(false);
+
+  React.useEffect(() => {
+    setDetails(residence || {});
+  }, [residence?.id]);
+
+  React.useEffect(() => {
+    const load = async () => {
+      try {
+        const [resDetail, resClients] = await Promise.all([
+          fetch(`/api/residences/${residence.id}`, { headers: { 'Authorization': `Bearer ${token}` } }),
+          fetch('/api/clients', { headers: { 'Authorization': `Bearer ${token}` } })
+        ]);
+        const detailData = await resDetail.json();
+        const clientData = await resClients.json();
+        if (detailData.success) {
+          setDetails(detailData.residence);
+          const primary = detailData.residence?.clients?.find(c => c.is_primary);
+          if (primary) setSelectedClient(String(primary.client_id));
+        }
+        if (clientData.success) setClients(clientData.clients || []);
+      } catch (error) {
+        console.error('Error loading project settings:', error);
+      }
+    };
+    if (token && residence?.id) load();
+  }, [token, residence?.id]);
+
+  const updateField = (field, value) => setDetails(prev => ({ ...prev, [field]: value }));
+
+  const saveProject = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const response = await fetch(`/api/residences/${residence.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(details)
+      });
+      const data = await response.json();
+      if (!data.success) {
+        alert(data.error || 'No se pudo guardar el proyecto');
+        return;
+      }
+      if (selectedClient) {
+        await fetch(`/api/residences/${residence.id}/clients`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ client_id: selectedClient, relationship: 'owner', is_primary: true })
+        });
+      }
+      onSaved?.({ ...details, id: residence.id });
+      alert('Proyecto actualizado');
+    } catch (error) {
+      console.error('Error saving project:', error);
+      alert('Error al guardar proyecto');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (userRole !== 'admin') return <div className="py-20 text-center text-slate-400">Acceso restringido.</div>;
+
+  return (
+    <form onSubmit={saveProject} className="space-y-6">
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-5">
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.5em] text-slate-400 font-black mb-2">Proyecto</p>
+          <h3 className="text-2xl font-bold text-slate-900">Editar informacion</h3>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <input value={details.name || ''} onChange={(e) => updateField('name', e.target.value)} placeholder="Nombre de casa/proyecto" className="px-4 py-3 border border-slate-200 rounded-lg" required />
+          <input value={details.status || ''} onChange={(e) => updateField('status', e.target.value)} placeholder="Status" className="px-4 py-3 border border-slate-200 rounded-lg" />
+          <input value={details.address || ''} onChange={(e) => updateField('address', e.target.value)} placeholder="Direccion" className="px-4 py-3 border border-slate-200 rounded-lg md:col-span-2" />
+          <input value={details.image || ''} onChange={(e) => updateField('image', e.target.value)} placeholder="URL de imagen" className="px-4 py-3 border border-slate-200 rounded-lg md:col-span-2" />
+          <input value={details.development || ''} onChange={(e) => updateField('development', e.target.value)} placeholder="Desarrollo" className="px-4 py-3 border border-slate-200 rounded-lg" />
+          <input value={details.property_manager || ''} onChange={(e) => updateField('property_manager', e.target.value)} placeholder="Property manager" className="px-4 py-3 border border-slate-200 rounded-lg" />
+          <select value={selectedClient} onChange={(e) => setSelectedClient(e.target.value)} className="px-4 py-3 border border-slate-200 rounded-lg">
+            <option value="">Cliente principal</option>
+            {clients.map(client => <option key={client.id} value={client.id}>{client.display_name}</option>)}
+          </select>
+          <input value={details.project_type || ''} onChange={(e) => updateField('project_type', e.target.value)} placeholder="Tipo de proyecto" className="px-4 py-3 border border-slate-200 rounded-lg" />
+        </div>
+      </div>
+
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-5">
+        <h4 className="text-lg font-bold text-slate-900">Cliente y facturacion</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <input value={details.owner_name || ''} onChange={(e) => updateField('owner_name', e.target.value)} placeholder="Owner name" className="px-4 py-3 border border-slate-200 rounded-lg" />
+          <input value={details.client_name || ''} onChange={(e) => updateField('client_name', e.target.value)} placeholder="Nombre cliente" className="px-4 py-3 border border-slate-200 rounded-lg" />
+          <input value={details.client_company || ''} onChange={(e) => updateField('client_company', e.target.value)} placeholder="Empresa cliente" className="px-4 py-3 border border-slate-200 rounded-lg" />
+          <input value={details.billing_email || ''} onChange={(e) => updateField('billing_email', e.target.value)} placeholder="Email facturacion" className="px-4 py-3 border border-slate-200 rounded-lg" />
+          <input value={details.billing_phone || ''} onChange={(e) => updateField('billing_phone', e.target.value)} placeholder="Telefono facturacion" className="px-4 py-3 border border-slate-200 rounded-lg" />
+          <select value={details.preferred_language || 'es'} onChange={(e) => updateField('preferred_language', e.target.value)} className="px-4 py-3 border border-slate-200 rounded-lg">
+            <option value="es">Espanol</option>
+            <option value="en">English</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-5">
+        <h4 className="text-lg font-bold text-slate-900">Tarifas default</h4>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <input type="number" step="0.01" value={details.service_hour_rate_first || ''} onChange={(e) => updateField('service_hour_rate_first', e.target.value)} placeholder="Primera hora" className="px-4 py-3 border border-slate-200 rounded-lg" />
+          <input type="number" step="0.01" value={details.service_hour_rate_extra || ''} onChange={(e) => updateField('service_hour_rate_extra', e.target.value)} placeholder="Hora adicional" className="px-4 py-3 border border-slate-200 rounded-lg" />
+          <input type="number" step="0.01" value={details.default_tax_rate || ''} onChange={(e) => updateField('default_tax_rate', e.target.value)} placeholder="Tax rate" className="px-4 py-3 border border-slate-200 rounded-lg" />
+        </div>
+      </div>
+
+      <div className="flex justify-end">
+        <button disabled={saving} type="submit" className="px-6 py-3 bg-slate-950 text-white rounded-lg text-xs uppercase tracking-[0.25em] font-black disabled:opacity-50">
+          {saving ? 'Guardando...' : 'Guardar cambios'}
+        </button>
+      </div>
+    </form>
   );
 };
 
@@ -3288,10 +3599,12 @@ const ArrivalCheckTab = ({ residenceId, token, userRole }) => {
 
 const QuotationsDashboard = ({ token, residences, userRole, onOpenProject }) => {
   const [quotes, setQuotes] = React.useState([]);
+  const [tickets, setTickets] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [showCreate, setShowCreate] = React.useState(false);
   const [form, setForm] = React.useState({
     project_id: residences?.[0]?.id || '',
+    ticket_id: '',
     title: '',
     description: '',
     client_name: '',
@@ -3313,15 +3626,39 @@ const QuotationsDashboard = ({ token, residences, userRole, onOpenProject }) => 
     }
   };
 
+  const applyProjectDefaults = async (projectId) => {
+    const project = residences.find(res => String(res.id) === String(projectId));
+    setForm(prev => ({
+      ...prev,
+      project_id: projectId,
+      client_name: project?.client_name || project?.owner_name || prev.client_name || '',
+      client_email: project?.billing_email || prev.client_email || '',
+      language_default: project?.preferred_language || prev.language_default || 'es',
+      ticket_id: ''
+    }));
+    try {
+      const response = await fetch(`/api/support/residence/${projectId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+      const data = await response.json();
+      setTickets(data.success ? (data.tickets || []) : []);
+    } catch (error) {
+      console.error('Error fetching quote tickets:', error);
+      setTickets([]);
+    }
+  };
+
   React.useEffect(() => {
     if (token) fetchQuotes();
   }, [token]);
 
   React.useEffect(() => {
     if (residences?.length && !form.project_id) {
-      setForm(prev => ({ ...prev, project_id: residences[0].id }));
+      applyProjectDefaults(residences[0].id);
     }
   }, [residences]);
+
+  React.useEffect(() => {
+    if (token && form.project_id) applyProjectDefaults(form.project_id);
+  }, [token]);
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -3337,7 +3674,7 @@ const QuotationsDashboard = ({ token, residences, userRole, onOpenProject }) => 
       const data = await response.json();
       if (data.success) {
         setShowCreate(false);
-        setForm({ project_id: residences?.[0]?.id || '', title: '', description: '', client_name: '', client_email: '', language_default: 'es' });
+        setForm({ project_id: residences?.[0]?.id || '', ticket_id: '', title: '', description: '', client_name: '', client_email: '', language_default: 'es' });
         fetchQuotes();
       } else {
         alert(data.error || 'No se pudo crear la cotización');
@@ -3345,6 +3682,21 @@ const QuotationsDashboard = ({ token, residences, userRole, onOpenProject }) => 
     } catch (error) {
       console.error('Error creating quote:', error);
       alert('Error al crear cotización');
+    }
+  };
+
+  const deleteQuote = async (quote) => {
+    if (!confirm(`Eliminar cotizacion ${quote.quote_number}?`)) return;
+    try {
+      const response = await fetch(`/api/quotes/${quote.id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (data.success) fetchQuotes();
+      else alert(data.error || 'No se pudo eliminar la cotizacion');
+    } catch (error) {
+      console.error('Error deleting quote:', error);
     }
   };
 
@@ -3366,12 +3718,16 @@ const QuotationsDashboard = ({ token, residences, userRole, onOpenProject }) => 
 
       {showCreate && (
         <form onSubmit={handleCreate} className="bg-white border border-slate-200 rounded-2xl p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <select value={form.project_id} onChange={(e) => setForm({ ...form, project_id: e.target.value })} className="px-4 py-3 border border-slate-200 rounded-lg">
+          <select value={form.project_id} onChange={(e) => applyProjectDefaults(e.target.value)} className="px-4 py-3 border border-slate-200 rounded-lg">
             {residences.map(res => <option key={res.id} value={res.id}>{res.name}</option>)}
           </select>
-          <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Título de cotización" className="px-4 py-3 border border-slate-200 rounded-lg" required />
+          <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Descripcion corta / alcance" className="px-4 py-3 border border-slate-200 rounded-lg" required />
           <input value={form.client_name} onChange={(e) => setForm({ ...form, client_name: e.target.value })} placeholder="Nombre del cliente" className="px-4 py-3 border border-slate-200 rounded-lg" />
           <input value={form.client_email} onChange={(e) => setForm({ ...form, client_email: e.target.value })} placeholder="Email del cliente" className="px-4 py-3 border border-slate-200 rounded-lg" />
+          <select value={form.ticket_id} onChange={(e) => setForm({ ...form, ticket_id: e.target.value })} className="px-4 py-3 border border-slate-200 rounded-lg">
+            <option value="">Sin ticket relacionado</option>
+            {tickets.map(ticket => <option key={ticket.id} value={ticket.id}>{ticket.title}</option>)}
+          </select>
           <select value={form.language_default} onChange={(e) => setForm({ ...form, language_default: e.target.value })} className="px-4 py-3 border border-slate-200 rounded-lg">
             <option value="es">Español</option>
             <option value="en">English</option>
@@ -3412,6 +3768,7 @@ const QuotationsDashboard = ({ token, residences, userRole, onOpenProject }) => 
               <div className="flex flex-col md:flex-row gap-3">
                 <button onClick={() => onOpenProject(quote.project_id)} className="px-4 py-3 border border-slate-200 rounded-lg text-sm font-medium hover:border-slate-400 transition-colors">Abrir proyecto</button>
                 <button className="px-4 py-3 border border-slate-200 rounded-lg text-sm font-medium hover:border-slate-400 transition-colors" onClick={() => navigator.clipboard?.writeText(`${window.location.origin}/quote/${quote.public_token}`)}>Copiar link público</button>
+                {userRole === 'admin' && <button onClick={() => deleteQuote(quote)} className="px-4 py-3 border border-red-100 text-red-600 rounded-lg text-sm font-medium hover:border-red-300 transition-colors">Eliminar</button>}
               </div>
             </div>
           ))}
@@ -3501,8 +3858,10 @@ const QuotesTab = ({ residence, token, userRole }) => {
   const [selectedQuote, setSelectedQuote] = React.useState(null);
   const [items, setItems] = React.useState([]);
   const [pricing, setPricing] = React.useState(null);
+  const [serviceCatalog, setServiceCatalog] = React.useState([]);
+  const [tickets, setTickets] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
-  const [newItem, setNewItem] = React.useState({ title_es: '', title_en: '', quantity: 1, unit: 'unit', unit_price: 0, item_type: 'service', taxable: true });
+  const [newItem, setNewItem] = React.useState({ service_catalog_id: '', title_es: '', title_en: '', quantity: 1, unit: 'unit', unit_price: 0, item_type: 'service', taxable: true });
   const [pricingForm, setPricingForm] = React.useState({ first_hour_rate: 150, extra_hour_rate: 95, tax_rate: 0.16, currency: 'USD' });
 
   const fetchQuotes = async () => {
@@ -3551,10 +3910,32 @@ const QuotesTab = ({ residence, token, userRole }) => {
     }
   };
 
+  const fetchServiceCatalog = async () => {
+    try {
+      const response = await fetch('/api/service-catalog', { headers: { 'Authorization': `Bearer ${token}` } });
+      const data = await response.json();
+      if (data.success) setServiceCatalog(data.services || []);
+    } catch (error) {
+      console.error('Error fetching service catalog:', error);
+    }
+  };
+
+  const fetchTickets = async () => {
+    try {
+      const response = await fetch(`/api/support/residence/${residence.id}`, { headers: { 'Authorization': `Bearer ${token}` } });
+      const data = await response.json();
+      if (data.success) setTickets(data.tickets || []);
+    } catch (error) {
+      console.error('Error fetching tickets:', error);
+    }
+  };
+
   React.useEffect(() => {
     if (token && residence?.id) {
       fetchQuotes();
       fetchPricing();
+      fetchServiceCatalog();
+      fetchTickets();
     }
   }, [token, residence?.id]);
 
@@ -3597,7 +3978,7 @@ const QuotesTab = ({ residence, token, userRole }) => {
       });
       const data = await response.json();
       if (data.success) {
-        setNewItem({ title_es: '', title_en: '', quantity: 1, unit: 'unit', unit_price: 0, item_type: 'service', taxable: true });
+        setNewItem({ service_catalog_id: '', title_es: '', title_en: '', quantity: 1, unit: 'unit', unit_price: 0, item_type: 'service', taxable: true });
         fetchQuoteDetail(selectedQuote.id);
         fetchQuotes();
       } else {
@@ -3605,6 +3986,48 @@ const QuotesTab = ({ residence, token, userRole }) => {
       }
     } catch (error) {
       console.error('Error adding item:', error);
+    }
+  };
+
+  const applyServicePreset = (serviceId) => {
+    const service = serviceCatalog.find(item => String(item.id) === String(serviceId));
+    if (!service) {
+      setNewItem(prev => ({ ...prev, service_catalog_id: '' }));
+      return;
+    }
+    let unitPrice = service.default_unit_price || 0;
+    if (service.code === 'FIRST_HOUR_ONSITE') unitPrice = pricingForm.first_hour_rate || unitPrice;
+    if (service.code === 'ADDITIONAL_HOUR_ONSITE') unitPrice = pricingForm.extra_hour_rate || unitPrice;
+    setNewItem(prev => ({
+      ...prev,
+      service_catalog_id: service.id,
+      title_es: service.name_es || service.name_en || prev.title_es,
+      title_en: service.name_en || service.name_es || prev.title_en,
+      unit: service.unit || 'unit',
+      quantity: service.default_quantity || 1,
+      unit_price: unitPrice,
+      item_type: service.item_type || 'service',
+      taxable: service.taxable !== 0
+    }));
+  };
+
+  const deleteSelectedQuote = async () => {
+    if (!selectedQuote?.id || !confirm(`Eliminar cotizacion ${selectedQuote.quote_number}?`)) return;
+    try {
+      const response = await fetch(`/api/quotes/${selectedQuote.id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setSelectedQuote(null);
+        setItems([]);
+        fetchQuotes();
+      } else {
+        alert(data.error || 'No se pudo eliminar la cotizacion');
+      }
+    } catch (error) {
+      console.error('Error deleting quote:', error);
     }
   };
 
@@ -3649,6 +4072,8 @@ const QuotesTab = ({ residence, token, userRole }) => {
                     <div className="text-xs uppercase tracking-[0.25em] text-slate-400 font-black mb-2">{selectedQuote.quote_number}</div>
                     <h3 className="text-2xl font-bold text-slate-900">{selectedQuote.title}</h3>
                     <p className="text-slate-500 mt-2">{selectedQuote.description || 'Sin descripción'}</p>
+                    {selectedQuote.ticket_id && <p className="text-xs uppercase tracking-[0.2em] text-slate-400 font-bold mt-3">Ticket relacionado #{selectedQuote.ticket_id}</p>}
+                    {userRole === 'admin' && <button onClick={deleteSelectedQuote} className="mt-4 px-4 py-2 border border-red-100 text-red-600 rounded-lg text-xs uppercase tracking-[0.2em] font-black">Eliminar cotizacion</button>}
                   </div>
                   <div className="bg-slate-50 rounded-xl p-4 min-w-[220px]">
                     <div className="text-xs uppercase tracking-[0.25em] text-slate-400 font-black">Totales</div>
@@ -3690,6 +4115,10 @@ const QuotesTab = ({ residence, token, userRole }) => {
 
                 {userRole === 'admin' && (
                   <form onSubmit={addItem} className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3 pt-4 border-t border-slate-100">
+                    <select value={newItem.service_catalog_id} onChange={(e) => applyServicePreset(e.target.value)} className="px-4 py-3 border border-slate-200 rounded-lg md:col-span-2 xl:col-span-2">
+                      <option value="">Servicio predefinido</option>
+                      {serviceCatalog.map(service => <option key={service.id} value={service.id}>{service.name_es || service.name_en}</option>)}
+                    </select>
                     <input value={newItem.title_es} onChange={(e) => setNewItem({ ...newItem, title_es: e.target.value })} placeholder="Título ES" className="px-4 py-3 border border-slate-200 rounded-lg xl:col-span-2" required />
                     <input value={newItem.title_en} onChange={(e) => setNewItem({ ...newItem, title_en: e.target.value })} placeholder="Title EN" className="px-4 py-3 border border-slate-200 rounded-lg xl:col-span-2" />
                     <select value={newItem.item_type} onChange={(e) => setNewItem({ ...newItem, item_type: e.target.value })} className="px-4 py-3 border border-slate-200 rounded-lg">

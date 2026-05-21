@@ -179,6 +179,8 @@ quotes.post('/', async (c) => {
       description,
       client_name,
       client_email,
+      client_id,
+      ticket_id,
       language_default,
       notes_client_es,
       notes_client_en,
@@ -196,9 +198,15 @@ quotes.post('/', async (c) => {
       return c.json({ error: 'Solo administradores pueden crear cotizaciones' }, 403);
     }
 
-    const project = await db.prepare(
-      'SELECT id, client_name, billing_email, default_tax_rate, service_hour_rate_first, service_hour_rate_extra, preferred_language FROM residences WHERE id = ?'
-    ).bind(project_id).first();
+    const project = await db.prepare(`
+      SELECT r.id, r.client_name, r.billing_email, r.default_tax_rate, r.service_hour_rate_first,
+        r.service_hour_rate_extra, r.preferred_language,
+        c.id as primary_client_id, c.display_name as primary_client_name, c.email as primary_client_email, c.billing_email as primary_billing_email
+      FROM residences r
+      LEFT JOIN project_clients pc ON r.id = pc.project_id AND pc.is_primary = 1
+      LEFT JOIN clients c ON pc.client_id = c.id
+      WHERE r.id = ?
+    `).bind(project_id).first();
 
     if (!project) {
       return c.json({ error: 'Proyecto no encontrado' }, 404);
@@ -215,10 +223,10 @@ quotes.post('/', async (c) => {
         project_id, quote_number, title, description, status, language_default, currency,
         tax_rate, first_hour_rate, extra_hour_rate,
         estimated_hours_first, estimated_hours_extra,
-        client_name, client_email, public_token,
+        client_name, client_email, client_id, ticket_id, public_token,
         notes_client_es, notes_client_en, notes_internal,
         created_by
-      ) VALUES (?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       project_id,
       quoteNumber,
@@ -231,8 +239,10 @@ quotes.post('/', async (c) => {
       extraRate,
       Number(estimated_hours_first || 1),
       Number(estimated_hours_extra || 0),
-      client_name || project.client_name || null,
-      client_email || project.billing_email || null,
+      client_name || project.primary_client_name || project.client_name || null,
+      client_email || project.primary_billing_email || project.primary_client_email || project.billing_email || null,
+      client_id || project.primary_client_id || null,
+      ticket_id || null,
       publicToken,
       notes_client_es || null,
       notes_client_en || null,
@@ -245,7 +255,7 @@ quotes.post('/', async (c) => {
     await db.prepare(`
       INSERT INTO sales_records (quote_id, project_id, client_name, stage, expected_value, owner_user_id)
       VALUES (?, ?, ?, 'quoted', 0, ?)
-    `).bind(quoteId, project_id, client_name || project.client_name || null, user.userId).run();
+    `).bind(quoteId, project_id, client_name || project.primary_client_name || project.client_name || null, user.userId).run();
 
     await logServiceEvent(db, project_id, quoteId, 'quote_created', `Cotización ${quoteNumber} creada`, user.userId, { title });
 
@@ -291,6 +301,8 @@ quotes.put('/:id', async (c) => {
       estimated_hours_extra,
       client_name,
       client_email,
+      client_id,
+      ticket_id,
       notes_internal,
       notes_client_es,
       notes_client_en,
@@ -311,6 +323,8 @@ quotes.put('/:id', async (c) => {
         estimated_hours_extra = ?,
         client_name = ?,
         client_email = ?,
+        client_id = ?,
+        ticket_id = ?,
         notes_internal = ?,
         notes_client_es = ?,
         notes_client_en = ?,
@@ -330,6 +344,8 @@ quotes.put('/:id', async (c) => {
       Number(estimated_hours_extra ?? existing.estimated_hours_extra),
       client_name ?? existing.client_name,
       client_email ?? existing.client_email,
+      client_id ?? existing.client_id,
+      ticket_id ?? existing.ticket_id,
       notes_internal ?? existing.notes_internal,
       notes_client_es ?? existing.notes_client_es,
       notes_client_en ?? existing.notes_client_en,
@@ -378,7 +394,8 @@ quotes.post('/:id/items', async (c) => {
       quantity,
       unit,
       unit_price,
-      taxable
+      taxable,
+      service_catalog_id
     } = body;
 
     if (!title_es) {
@@ -393,7 +410,8 @@ quotes.post('/:id/items', async (c) => {
       INSERT INTO quote_items (
         quote_id, sort_order, item_type, title_es, title_en,
         description_es, description_en, quantity, unit, unit_price, taxable, line_total
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        , service_catalog_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       quoteId,
       Number(sort_order || 0),
@@ -406,7 +424,8 @@ quotes.post('/:id/items', async (c) => {
       unit || 'unit',
       unitPrice,
       taxable === false ? 0 : 1,
-      lineTotal
+      lineTotal,
+      service_catalog_id || null
     ).run();
 
     const totals = await recalcQuote(db, quoteId);
@@ -455,6 +474,7 @@ quotes.put('/:id/items/:itemId', async (c) => {
         unit_price = ?,
         taxable = ?,
         line_total = ?,
+        service_catalog_id = ?,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ? AND quote_id = ?
     `).bind(
@@ -469,6 +489,7 @@ quotes.put('/:id/items/:itemId', async (c) => {
       unitPrice,
       body.taxable === false ? 0 : (body.taxable === true ? 1 : item.taxable),
       lineTotal,
+      body.service_catalog_id ?? item.service_catalog_id,
       itemId,
       quoteId
     ).run();
@@ -509,6 +530,36 @@ quotes.delete('/:id/items/:itemId', async (c) => {
   } catch (error) {
     console.error('Delete quote item error:', error);
     return c.json({ error: 'Error al eliminar partida' }, 500);
+  }
+});
+
+quotes.delete('/:id', async (c) => {
+  try {
+    const user = c.get('user');
+    const quoteId = Number(c.req.param('id'));
+    const db = c.env.DB;
+
+    if (user.role === 'client') {
+      return c.json({ error: 'Solo administradores pueden eliminar cotizaciones' }, 403);
+    }
+
+    const quote = await db.prepare('SELECT * FROM quotes WHERE id = ?').bind(quoteId).first();
+    if (!quote) {
+      return c.json({ error: 'CotizaciÃ³n no encontrada' }, 404);
+    }
+
+    await db.prepare('DELETE FROM quote_items WHERE quote_id = ?').bind(quoteId).run();
+    await db.prepare('DELETE FROM quote_views WHERE quote_id = ?').bind(quoteId).run();
+    await db.prepare('DELETE FROM quote_signatures WHERE quote_id = ?').bind(quoteId).run();
+    await db.prepare('DELETE FROM sales_records WHERE quote_id = ?').bind(quoteId).run();
+    await db.prepare('UPDATE service_logs SET quote_id = NULL WHERE quote_id = ?').bind(quoteId).run();
+    await db.prepare('DELETE FROM quotes WHERE id = ?').bind(quoteId).run();
+    await logServiceEvent(db, quote.project_id as string, null, 'quote_deleted', `CotizaciÃ³n ${quote.quote_number} eliminada`, user.userId);
+
+    return c.json({ success: true, message: 'CotizaciÃ³n eliminada' });
+  } catch (error) {
+    console.error('Delete quote error:', error);
+    return c.json({ error: 'Error al eliminar cotizaciÃ³n' }, 500);
   }
 });
 

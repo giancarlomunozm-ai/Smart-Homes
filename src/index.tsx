@@ -16,6 +16,8 @@ import pricingSettings from './routes/pricing-settings';
 import serviceHistory from './routes/service-history';
 import sales from './routes/sales';
 import publicQuotes from './routes/public-quotes';
+import clients from './routes/clients';
+import serviceCatalog from './routes/service-catalog';
 
 type Bindings = {
   DB: D1Database;
@@ -48,6 +50,8 @@ app.route('/api/pricing-settings', pricingSettings);
 app.route('/api/service-history', serviceHistory);
 app.route('/api/sales', sales);
 app.route('/api/public/quotes', publicQuotes);
+app.route('/api/clients', clients);
+app.route('/api/service-catalog', serviceCatalog);
 
 // Health check
 app.get('/api/health', (c) => {
